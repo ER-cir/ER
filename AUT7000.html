@@ -71,6 +71,7 @@
                 <div class="text-sm text-gray-600 space-y-1">
                     <p>เปลี่ยนล่าสุด: <strong id="ro-date" class="font-semibold">N/A</strong></p>
                     <p>โดย: <strong id="ro-by" class="font-semibold">N/A</strong></p>
+                    <p>เปลี่ยนแล้ว: <strong id="ro-count" class="font-semibold">0</strong> ครั้ง</p>
                 </div>
                 <button onclick="openModal('RO')" class="mt-auto w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 shadow-md hover:shadow-lg mt-5">
                     บันทึกการเปลี่ยน
@@ -89,6 +90,7 @@
                 <div class="text-sm text-gray-600 space-y-1">
                     <p>เปลี่ยนล่าสุด: <strong id="cp-date" class="font-semibold">N/A</strong></p>
                     <p>โดย: <strong id="cp-by" class="font-semibold">N/A</strong></p>
+                    <p>เปลี่ยนแล้ว: <strong id="cp-count" class="font-semibold">0</strong> ครั้ง</p>
                 </div>
                 <button onclick="openModal('CP')" class="mt-auto w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 shadow-md hover:shadow-lg mt-5">
                     บันทึกการเปลี่ยน
@@ -107,6 +109,7 @@
                 <div class="text-sm text-gray-600 space-y-1">
                     <p>เปลี่ยนล่าสุด: <strong id="minere-date" class="font-semibold">N/A</strong></p>
                     <p>โดย: <strong id="minere-by" class="font-semibold">N/A</strong></p>
+                    <p>เปลี่ยนแล้ว: <strong id="minere-count" class="font-semibold">0</strong> ครั้ง</p>
                 </div>
                 <button onclick="openModal('MINERE')" class="mt-auto w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 shadow-md hover:shadow-lg mt-5">
                     บันทึกการเปลี่ยน
@@ -153,7 +156,6 @@
         const filterCardsContainer = document.getElementById('filter-cards-container');
         const errorMessage = document.getElementById('error-message');
 
-        // DOM Elements for Modal
         const modal = document.getElementById('form-modal');
         const modalTitle = document.getElementById('modal-title');
         const filterTypeInput = document.getElementById('filter-type-input');
@@ -162,7 +164,6 @@
         const changeForm = document.getElementById('change-form');
         const toast = document.getElementById('toast-notification');
 
-        // Function to open modal
         function openModal(filterType) {
             modalTitle.textContent = `บันทึกการเปลี่ยนไส้กรอง ${filterType}`;
             filterTypeInput.value = filterType;
@@ -171,12 +172,10 @@
             modal.classList.remove('hidden');
         }
 
-        // Function to close modal
         function closeModal() {
             modal.classList.add('hidden');
         }
 
-        // Function to calculate days between two dates
         function calculateDaysBetween(startDateStr) {
             if (!startDateStr) return 0;
             const startDate = new Date(startDateStr);
@@ -185,31 +184,28 @@
             return Math.floor(timeDiff / (1000 * 3600 * 24));
         }
         
-        // Function to format date to DD/MM/YYYY
         function formatDate(dateStr) {
             if (!dateStr) return 'N/A';
             const date = new Date(dateStr);
             const day = String(date.getDate()).padStart(2, '0');
             const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = date.getFullYear() + 543; // Convert to Buddhist year
+            const year = date.getFullYear() + 543;
             return `${day}/${month}/${year}`;
         }
 
-        // Function to update status ring color
         function updateStatusRing(element, days) {
             element.classList.remove('border-green-500', 'border-yellow-500', 'border-red-500', 'border-gray-200');
             if (days === null || isNaN(days)) {
                 element.classList.add('border-gray-200');
-            } else if (days <= 150) { // 0-5 months
+            } else if (days <= 150) {
                 element.classList.add('border-green-500');
-            } else if (days <= 180) { // 5-6 months
+            } else if (days <= 180) {
                 element.classList.add('border-yellow-500');
-            } else { // > 6 months
+            } else {
                 element.classList.add('border-red-500');
             }
         }
 
-        // Function to update UI with fetched data
         function updateUI(data) {
             const filters = ['ro', 'cp', 'minere'];
             filters.forEach(filter => {
@@ -217,6 +213,7 @@
                 const daysElement = document.getElementById(`${filter}-days`);
                 const dateElement = document.getElementById(`${filter}-date`);
                 const byElement = document.getElementById(`${filter}-by`);
+                const countElement = document.getElementById(`${filter}-count`);
                 const ringElement = document.querySelector(`#${filter}-card .status-ring`);
 
                 if (filterData) {
@@ -224,17 +221,18 @@
                     daysElement.textContent = daysUsed;
                     dateElement.textContent = formatDate(filterData.date);
                     byElement.textContent = filterData.by;
+                    countElement.textContent = filterData.count;
                     updateStatusRing(ringElement, daysUsed);
                 } else {
                     daysElement.textContent = '-';
                     dateElement.textContent = 'ยังไม่มีข้อมูล';
                     byElement.textContent = '-';
+                    countElement.textContent = '0';
                     updateStatusRing(ringElement, null);
                 }
             });
         }
 
-        // Function to fetch the latest data from Google Sheet
         async function fetchLatestData() {
             loadingSpinner.classList.remove('hidden');
             filterCardsContainer.classList.add('hidden');
@@ -256,7 +254,6 @@
             }
         }
         
-        // Function to handle form submission
         async function handleFormSubmit(event) {
             event.preventDefault();
             const submitButton = event.target.querySelector('button[type="submit"]');
@@ -272,19 +269,17 @@
             try {
                 const response = await fetch(APPS_SCRIPT_URL, {
                     method: 'POST',
-                    mode: 'no-cors', // Important for Apps Script POST requests from browser
+                    mode: 'no-cors',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify(formData)
                 });
                 
-                // Since 'no-cors' prevents reading the response, we optimistically update.
                 closeModal();
                 toast.classList.remove('hidden');
                 setTimeout(() => toast.classList.add('hidden'), 3000);
                 
-                // Refresh data after a short delay to allow sheet to update
                 setTimeout(fetchLatestData, 1000);
 
             } catch (error) {
@@ -296,11 +291,9 @@
             }
         }
 
-        // Event Listeners
         document.addEventListener('DOMContentLoaded', fetchLatestData);
         changeForm.addEventListener('submit', handleFormSubmit);
     </script>
 </body>
 </html>
-
 
