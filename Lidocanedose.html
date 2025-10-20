@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lidocaine Max Dose Calculator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+        }
+        /* Custom styles to enhance Tailwind */
+        .result-value {
+            font-size: 2.25rem; /* Larger font for the result */
+            line-height: 1.2;
+            font-weight: 700; /* bold */
+        }
+        .result-unit {
+            font-size: 1rem;
+            color: #4a5568; /* text-gray-700 */
+            font-weight: 400; /* normal */
+        }
+        .card-title {
+            font-size: 1.125rem; /* text-lg */
+            font-weight: 700; /* bold */
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- Main App Container -->
+    <div class="w-full max-w-4xl mx-auto p-6 md:p-8 my-8 bg-white rounded-2xl shadow-lg">
+        
+        <header class="text-center mb-8">
+            <img src="https://i.postimg.cc/vHcRLT5g/image.png" alt="Calculator Logo" class="mx-auto mb-4 w-24 h-auto" onerror="this.style.display='none'">
+            <h1 class="text-2xl md:text-3xl font-bold text-teal-700">Lidocaine Max Dose Calculator</h1>
+        </header>
+
+        <!-- Input Section -->
+        <div class="mb-8 text-center">
+            <label for="weight" class="block text-lg font-medium text-gray-700 mb-2">Enter Patient Weight (Kg)</label>
+            <input 
+                type="number" 
+                id="weight" 
+                placeholder="e.g., 60" 
+                class="w-48 mx-auto p-3 text-center text-xl border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition"
+                oninput="calculateDose()">
+            <!-- Warning Message Area -->
+            <div id="warning-message" class="mt-3 text-yellow-600 font-semibold hidden"></div>
+        </div>
+
+        <!-- Results Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Card 1: Plain 1% -->
+            <div class="bg-blue-50 border-b-4 border-blue-400 p-4 rounded-lg shadow-sm text-center">
+                <h3 class="card-title text-blue-800">1% Lidocaine without Adrenaline</h3>
+                <div id="plain_1_percent" class="result-value text-blue-900">-</div>
+            </div>
+            <!-- Card 2: Plain 2% -->
+            <div class="bg-blue-50 border-b-4 border-blue-400 p-4 rounded-lg shadow-sm text-center">
+                <h3 class="card-title text-blue-800">2% Lidocaine without Adrenaline</h3>
+                <div id="plain_2_percent" class="result-value text-blue-900">-</div>
+            </div>
+            <!-- Card 3: With Adrenaline 1% -->
+            <div class="bg-red-50 border-b-4 border-red-400 p-4 rounded-lg shadow-sm text-center">
+                <h3 class="card-title text-red-800">1% Lidocaine with Adrenaline</h3>
+                <div id="with_1_percent" class="result-value text-red-900">-</div>
+            </div>
+            <!-- Card 4: With Adrenaline 2% -->
+            <div class="bg-red-50 border-b-4 border-red-400 p-4 rounded-lg shadow-sm text-center">
+                <h3 class="card-title text-red-800">2% Lidocaine with Adrenaline</h3>
+                <div id="with_2_percent" class="result-value text-red-900">-</div>
+            </div>
+        </div>
+
+        <!-- Toxicity Info Button -->
+        <div class="text-center my-8">
+            <button id="open-toxicity-modal-btn" class="px-6 py-3 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition shadow-sm">
+                View Lidocaine Toxicity Info
+            </button>
+        </div>
+        
+        <!-- Reference Section -->
+        <div class="mt-8 pt-6 border-t border-gray-200 text-sm text-gray-600">
+            <h2 class="text-base font-semibold text-gray-800 mb-2">Reference</h2>
+            <p>Calculation based on standard pharmacological and anesthesiology guidelines:</p>
+            <ul class="list-disc list-inside mt-2 space-y-1">
+                <li><strong>Lidocaine without Adrenaline:</strong> Maximum dose of <strong>4.5 mg/kg</strong> (not to exceed 300 mg).</li>
+                <li><strong>Lidocaine with Adrenaline:</strong> Maximum dose of <strong>7 mg/kg</strong> (not to exceed 500 mg).</li>
+            </ul>
+            <p class="mt-2 text-xs text-gray-500">Sources: Lexicomp®, Stoelting's Pharmacology & Physiology in Anesthetic Practice, and general Prescribing Information.</p>
+        </div>
+
+        <!-- Footer Section -->
+        <footer class="text-center mt-8 pt-6 border-t border-gray-200">
+            <p class="text-sm text-gray-500">งานผู้ป่วยอุบัติเหตุฉุกเฉินและนิติเวช รพ.เจาะไอร้อง</p>
+        </footer>
+    </div>
+
+    <!-- Toxicity Modal -->
+    <div id="toxicity-modal" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto relative">
+            <!-- Modal Header -->
+            <div class="sticky top-0 bg-white p-4 border-b border-gray-200 flex justify-between items-center">
+                 <h2 class="text-2xl font-bold text-red-700">ภาวะเป็นพิษจากยา Lidocaine</h2>
+                 <button id="close-toxicity-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
+            </div>
+            <!-- Modal Body -->
+            <div class="p-6">
+                <section>
+                    <p class="text-lg text-gray-800 leading-relaxed">
+                        ภาวะเป็นพิษจากยา Lidocaine เป็นภาวะฉุกเฉินทางการแพทย์ที่เกิดขึ้นเมื่อระดับยา Lidocaine ในกระแสเลือดสูงเกินไปจนส่งผลกระทบต่อระบบต่างๆ ของร่างกาย โดยเฉพาะอย่างยิ่ง <strong>ระบบประสาทส่วนกลาง (CNS)</strong> และ <strong>ระบบหัวใจและหลอดเลือด (CVS)</strong> อาการแสดงมักจะเกิดขึ้นอย่างรวดเร็วและมีการดำเนินไปของอาการตามลำดับจากเบาไปหารุนแรง
+                    </p>
+                </section>
+                <!-- CNS Effects -->
+                <section class="mt-8">
+                    <h2 class="text-2xl font-bold text-gray-800 border-l-4 border-blue-500 pl-4">อาการทางระบบประสาทส่วนกลาง (CNS Effects)</h2>
+                    <p class="text-gray-600 mt-2">อาการทางระบบประสาทมักเกิดขึ้นก่อน และเป็นสัญญาณเตือนเริ่มแรกของภาวะพิษ</p>
+                    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h3 class="text-xl font-semibold text-blue-700 mb-3">อาการเริ่มแรก (Early Symptoms)</h3>
+                            <ul class="list-disc list-inside space-y-2 text-gray-700">
+                                <li>ชาบริเวณรอบปากและลิ้น</li>
+                                <li>รับรสผิดปกติ (รสโลหะ)</li>
+                                <li>เวียนศีรษะ, มึนงง</li>
+                                <li>หูอื้อ (Tinnitus)</li>
+                                <li>มองเห็นภาพไม่ชัด/ภาพซ้อน</li>
+                                <li>พูดไม่ชัด</li>
+                                <li>กระสับกระส่าย, สับสน</li>
+                                <li>กล้ามเนื้อกระตุก</li>
+                            </ul>
+                        </div>
+                        <div class="bg-red-50 p-4 rounded-lg">
+                            <h3 class="text-xl font-semibold text-red-700 mb-3">อาการรุนแรง (Severe Symptoms)</h3>
+                            <ul class="list-disc list-inside space-y-2 text-gray-700">
+                                <li>อาการชัก (Seizures)</li>
+                                <li>หมดสติ (Unconsciousness)</li>
+                                <li>กดการหายใจ และหยุดหายใจ</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+                <!-- Cardiovascular Effects -->
+                <section class="mt-8">
+                    <h2 class="text-2xl font-bold text-gray-800 border-l-4 border-red-500 pl-4">อาการทางระบบหัวใจและหลอดเลือด (CVS Effects)</h2>
+                    <p class="text-gray-600 mt-2">มักเกิดขึ้นหลังจากมีอาการทางระบบประสาท และบ่งชี้ถึงภาวะพิษที่รุนแรงมาก</p>
+                    <ul class="list-disc list-inside space-y-2 mt-4 text-gray-700 bg-gray-50 p-4 rounded-lg">
+                        <li>ความดันโลหิตต่ำ (Hypotension)</li>
+                        <li>หัวใจเต้นช้า (Bradycardia)</li>
+                        <li>การนำไฟฟ้าของหัวใจผิดปกติ (ECG เปลี่ยนแปลง)</li>
+                        <li>หัวใจเต้นผิดจังหวะรุนแรง (VT, VF)</li>
+                        <li>ภาวะหัวใจและหลอดเลือดล้มเหลว และหยุดเต้น</li>
+                    </ul>
+                </section>
+                <!-- Risk Factors & Management -->
+                <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <section>
+                        <h2 class="text-xl font-bold text-gray-800 mb-3">ปัจจัยเสี่ยง</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>ใช้ยาเกินขนาด</li>
+                            <li>ฉีดยาเข้าหลอดเลือด</li>
+                            <li>ฉีดในบริเวณที่มีเลือดไปเลี้ยงมาก</li>
+                            <li>ผู้ป่วยสูงอายุ, เด็กเล็ก</li>
+                            <li>ผู้ป่วยมีโรคประจำตัว (ตับ, หัวใจ)</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h2 class="text-xl font-bold text-gray-800 mb-3">การจัดการเบื้องต้น</h2>
+                        <ol class="list-decimal list-inside space-y-2 text-gray-700">
+                            <li><strong>หยุดให้ยา</strong>ทันที</li>
+                            <li><strong>ขอความช่วยเหลือ</strong> (Call for help)</li>
+                            <li>ดูแลทางเดินหายใจและให้ออกซิเจน</li>
+                            <li>ให้ยาต้านพิษ (Intravenous Lipid Emulsion 20%)</li>
+                        </ol>
+                    </section>
+                </div>
+                <!-- Key Takeaway -->
+                <div class="mt-8 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 rounded-r-lg">
+                    <p class="font-bold">ข้อควรจำ:</p>
+                    <p>การเฝ้าระวังสัญญาณเตือนเริ่มแรก โดยเฉพาะอาการชาที่ลิ้นและรอบปาก เป็นสิ่งสำคัญที่สุดที่จะช่วยให้สามารถตรวจพบและจัดการกับภาวะพิษจากยา Lidocaine ได้อย่างทันท่วงที</p>
+                </div>
+                <!-- References for Toxicity -->
+                <div class="mt-8 pt-6 border-t border-gray-200 text-sm text-gray-600">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">References</h3>
+                    <ul class="list-disc list-inside space-y-1 text-xs">
+                        <li>Schwartz, D. R., & Kaufman, B. (2023). Lidocaine Toxicity. In *StatPearls*. StatPearls Publishing. Available from: https://www.ncbi.nlm.nih.gov/books/NBK482479/</li>
+                        <li>Neal, J. M., et al. (2018). The American Society of Regional Anesthesia and Pain Medicine Checklist for Managing Local Anesthetic Systemic Toxicity: 2017 Version. *Regional Anesthesia and Pain Medicine*, 43(2), 150–153.</li>
+                        <li>Katzung, B. G., Masters, S. B., & Trevor, A. J. (2021). *Basic & Clinical Pharmacology*. McGraw-Hill.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- Calculator Logic ---
+    function calculateDose() {
+        const weightInput = document.getElementById('weight');
+        const weight = parseFloat(weightInput.value);
+        const plain1 = document.getElementById('plain_1_percent');
+        const plain2 = document.getElementById('plain_2_percent');
+        const with1 = document.getElementById('with_1_percent');
+        const with2 = document.getElementById('with_2_percent');
+        const warningEl = document.getElementById('warning-message');
+
+        warningEl.classList.add('hidden');
+        warningEl.textContent = '';
+        
+        if (weight && weight > 0) {
+            const potentialPlainDose = weight * 4.5;
+            const potentialWithDose = weight * 7.0;
+            if (potentialPlainDose > 300 || potentialWithDose > 500) {
+                warningEl.textContent = 'Dose capped at absolute maximum limit.';
+                warningEl.classList.remove('hidden');
+            }
+            const maxDosePlain_mg = Math.min(potentialPlainDose, 300);
+            const maxDoseWith_mg = Math.min(potentialWithDose, 500);
+            const plain1_ml = maxDosePlain_mg / 10;
+            const plain2_ml = maxDosePlain_mg / 20;
+            const with1_ml = maxDoseWith_mg / 10;
+            const with2_ml = maxDoseWith_mg / 20;
+            
+            plain1.innerHTML = `${plain1_ml.toFixed(1)} <span class="result-unit">mL</span>`;
+            plain2.innerHTML = `${plain2_ml.toFixed(1)} <span class="result-unit">mL</span>`;
+            with1.innerHTML = `${with1_ml.toFixed(1)} <span class="result-unit">mL</span>`;
+            with2.innerHTML = `${with2_ml.toFixed(1)} <span class="result-unit">mL</span>`;
+        } else {
+            plain1.textContent = '-';
+            plain2.textContent = '-';
+            with1.textContent = '-';
+            with2.textContent = '-';
+        }
+    }
+
+    // --- Modal Logic ---
+    const openModalBtn = document.getElementById('open-toxicity-modal-btn');
+    const closeModalBtn = document.getElementById('close-toxicity-modal-btn');
+    const toxicityModal = document.getElementById('toxicity-modal');
+
+    openModalBtn.addEventListener('click', () => {
+        toxicityModal.classList.remove('hidden');
+        toxicityModal.classList.add('flex');
+    });
+
+    const closeModal = () => {
+        toxicityModal.classList.add('hidden');
+        toxicityModal.classList.remove('flex');
+    };
+
+    closeModalBtn.addEventListener('click', closeModal);
+    toxicityModal.addEventListener('click', (event) => {
+        if (event.target === toxicityModal) {
+            closeModal();
+        }
+    });
+</script>
+
+</body>
+</html>
