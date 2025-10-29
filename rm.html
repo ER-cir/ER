@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แบบฟอร์มบันทึกความเสี่ยง</title>
+    <!-- โหลด Tailwind CSS --><script src="https://cdn.tailwindcss.com"></script>
+    <!-- โหลดฟอนต์ Inter --><link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ใช้ฟอนต์ Sarabun เป็นหลักสำหรับภาษาไทย */
+        body {
+            font-family: 'Sarabun', 'Inter', sans-serif;
+            background: linear-gradient(135deg, #e0f7fa 0%, #e8f5e9 100%); /* เขียว-ฟ้าอ่อนๆ */
+        }
+        /* ซ่อน scrollbar ของ modal เวลาเปิด */
+        .modal-open {
+            overflow: hidden;
+        }
+        /* Custom scrollbar สำหรับ modal content */
+        .modal-body::-webkit-scrollbar {
+            width: 6px;
+        }
+        .modal-body::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .modal-body::-webkit-scrollbar-thumb {
+            background: #c5c5c5;
+            border-radius: 10px;
+        }
+        .modal-body::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Custom scrollbar สำหรับทั้งหน้า (Page Scrollbar) */
+        html::-webkit-scrollbar {
+            width: 10px;
+        }
+        html::-webkit-scrollbar-track {
+            background: #e0f7fa; /* สีเดียวกับพื้นหลัง */
+        }
+        html::-webkit-scrollbar-thumb {
+            background-color: #a0d3e8; /* สีฟ้าที่เข้มขึ้น */
+            border-radius: 10px;
+            border: 2px solid #e0f7fa; /* สร้างเอฟเฟกต์ padding */
+        }
+        html::-webkit-scrollbar-thumb:hover {
+            background-color: #0ea5e9; /* สีฟ้าเข้มตอน hover */
+        }
+
+
+        /* Nurse Animation */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .nurse-float {
+            animation: float 3s ease-in-out infinite;
+        }
+        .nurse-icon {
+            opacity: 0.2; /* ปรับความโปร่งใส */
+            position: absolute; /* จัดตำแหน่งให้ลอยอยู่ด้านหลัง */
+            z-index: 0; /* อยู่ด้านหลังเนื้อหา */
+        }
+
+        /* ตำแหน่งของพยาบาล */
+        .nurse-icon.top-left {
+            top: 5%;
+            left: 5%;
+            transform: rotate(-15deg); /* หมุนเล็กน้อย */
+        }
+        .nurse-icon.bottom-right {
+            bottom: 5%;
+            right: 5%;
+            transform: rotate(15deg); /* หมุนเล็กน้อย */
+        }
+
+        /* ปรับขนาดพยาบาลตามหน้าจอ */
+        @media (max-width: 640px) { /* สำหรับมือถือ */
+            .nurse-icon {
+                width: 80px;
+                height: 80px;
+            }
+        }
+        @media (min-width: 641px) { /* สำหรับแท็บเล็ตขึ้นไป */
+            .nurse-icon {
+                width: 120px;
+                height: 120px;
+            }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4 sm:p-6 md:p-8 relative">
+
+    <!-- Nurse SVG Animation (Top Left) --><div class="nurse-icon top-left nurse-float">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="text-blue-400">
+            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1 14h2v2h-2v-2zm0-8h2v6h-2V8zm-2 2h2v2h-2v-2zm4 0h2v2h-2v-2zm-6 2h2v2h-2v-2zM12 4c-3.313 0-6 2.687-6 6h2c0-2.206 1.794-4 4-4s4 1.794 4 4c0 1.54-.863 2.87-2.126 3.593L13 14h-2l-.874-.407C9.337 13.125 8 11.66 8 10c0-2.206 1.794-4 4-4s4 1.794 4 4h2c0-3.313-2.687-6-6-6z"/>
+        </svg>
+    </div>
+
+    <!-- Nurse SVG Animation (Bottom Right) --><div class="nurse-icon bottom-right nurse-float" style="animation-delay: 1.5s;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="text-green-400">
+            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1 14h2v2h-2v-2zm0-8h2v6h-2V8zm-2 2h2v2h-2v-2zm4 0h2v2h-2v-2zm-6 2h2v2h-2v-2zM12 4c-3.313 0-6 2.687-6 6h2c0-2.206 1.794-4 4-4s4 1.794 4 4c0 1.54-.863 2.87-2.126 3.593L13 14h-2l-.874-.407C9.337 13.125 8 11.66 8 10c0-2.206 1.794-4 4-4s4 1.794 4 4h2c0-3.313-2.687-6-6-6z"/>
+        </svg>
+    </div>
+
+    <div class="bg-white w-full max-w-xl p-6 sm:p-8 rounded-2xl shadow-xl relative z-10"> <!-- เพิ่ม relative z-10 ให้ฟอร์มอยู่ด้านหน้า --><h1 class="text-2xl sm:text-3xl font-bold text-center text-blue-800 mb-6">
+            แบบฟอร์มบันทึกความเสี่ยง
+        </h1>
+        <p class="text-center text-gray-600 mb-8">Risk Management Incident Report</p>
+
+        <!-- Form --><form id="riskForm">
+            <!-- วันที่/เวลาเกิดอุบัติการณ์ --><div class="mb-5">
+                <label for="incidentDateTime" class="block text-sm font-medium text-gray-800 mb-2">1. วันที่ / เวลาเกิดอุบัติการณ์</label>
+                <input type="datetime-local" id="incidentDateTime" name="incidentDateTime" required
+                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+            </div>
+
+            <!-- สถานที่ --><div class="mb-5">
+                <label for="location" class="block text-sm font-medium text-gray-800 mb-2">2. สถานที่เกิดเหตุ</label>
+                <input type="text" id="location" name="location" placeholder="ระบุตึก, แผนก, หรือห้อง..." required
+                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+            </div>
+
+            <!-- รายละเอียดเหตุการณ์ --><div class="mb-5">
+                <label for="description" class="block text-sm font-medium text-gray-800 mb-2">3. รายละเอียดเหตุการณ์</label>
+                <textarea id="description" name="description" rows="4" placeholder="อธิบายเหตุการณ์ที่เกิดขึ้นโดยย่อ..." required
+                          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"></textarea>
+            </div>
+
+            <!-- ระดับ Clinical Risk --><div class="mb-5">
+                <div class="flex items-center justify-between mb-2">
+                    <label for="clinicalRisk" class="block text-sm font-medium text-gray-800">4. ระดับความเสี่ยงทางคลินิก (Clinical Risk)</label>
+                    <button type="button" id="openClinicalModal" class="flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-700 rounded-full text-sm font-bold hover:bg-blue-200 transition-all">
+                        i
+                    </button>
+                </div>
+                <select id="clinicalRisk" name="clinicalRisk"
+                        class="w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                    <option value="">-- กรุณาเลือก --</option>
+                    <option value="N/A">N/A (ไม่เกี่ยวข้อง)</option>
+                    <optgroup label="กลุ่มที่ 1: ยังไม่เกิดอันตราย">
+                        <option value="A (Circumstances)">A (Circumstances)</option>
+                        <option value="B (Error, No Harm - Did not reach)">B (Error, No Harm - Did not reach)</option>
+                        <option value="C (Error, No Harm - Reached)">C (Error, No Harm - Reached)</option>
+                        <option value="D (Error, No Harm - Required monitoring)">D (Error, No Harm - Required monitoring)</option>
+                    </optgroup>
+                    <optgroup label="กลุ่มที่ 2: เกิดอันตรายแล้ว">
+                        <option value="E (Error, Temporary Harm)">E (Error, Temporary Harm)</option>
+                        <option value="F (Error, Temporary Harm - Hospitalization)">F (Error, Temporary Harm - Hospitalization)</option>
+                        <option value="G (Error, Permanent Harm)">G (Error, Permanent Harm)</option>
+                    </optgroup>
+                    <optgroup label="กลุ่มที่ 3: อันตรายรุนแรงถึงชีวิต">
+                        <option value="H (Error, Near Death Event)">H (Error, Near Death Event)</option>
+                        <option value="I (Error, Death)">I (Error, Death)</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- ระดับ Non-Clinical Risk --><div class="mb-5">
+                <div class="flex items-center justify-between mb-2">
+                    <label for="nonClinicalRisk" class="block text-sm font-medium text-gray-800">5. ระดับความเสี่ยงที่ไม่ใช่คลินิก (Non-Clinical Risk)</label>
+                    <button type="button" id="openNonClinicalModal" class="flex items-center justify-center w-6 h-6 bg-green-100 text-green-700 rounded-full text-sm font-bold hover:bg-green-200 transition-all">
+                        i
+                    </button>
+                </div>
+                <select id="nonClinicalRisk" name="nonClinicalRisk"
+                        class="w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                    <option value="">-- กรุณาเลือก --</option>
+                    <option value="N/A">N/A (ไม่เกี่ยวข้อง)</option>
+                    <option value="1 (Minor)">1 (Minor - ผลกระทบเล็กน้อย)</option>
+                    <option value="2 (Moderate)">2 (Moderate - ผลกระทบปานกลาง)</option>
+                    <option value="3 (Major)">3 (Major - ผลกระทบรุนแรง)</option>
+                    <option value="4 (Severe)">4 (Severe - ผลกระทบรุนแรงมาก)</option>
+                </select>
+            </div>
+
+            <!-- การจัดการเบื้องต้น --><div class="mb-5">
+                <label for="initialManagement" class="block text-sm font-medium text-gray-800 mb-2">6. การจัดการเบื้องต้น</label>
+                <textarea id="initialManagement" name="initialManagement" rows="3" placeholder="อธิบายการแก้ไขปัญหาเบื้องต้น..." required
+                          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"></textarea>
+            </div>
+
+            <!-- ผู้ลงข้อมูล --><div class="mb-8">
+                <label for="reporter" class="block text-sm font-medium text-gray-800 mb-2">7. ผู้ลงข้อมูล</label>
+                <input type="text" id="reporter" name="reporter" placeholder="ชื่อ-สกุล ผู้รายงาน" required
+                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+            </div>
+
+            <!-- ปุ่ม Submit --><button type="submit" id="submitButton"
+                    class="w-full bg-blue-600 text-white p-3.5 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors duration-300
+                           disabled:bg-gray-400 disabled:cursor-not-allowed">
+                ส่งข้อมูล (Submit)
+            </button>
+            
+            <!-- Loading Spinner --><div id="loadingSpinner" class="hidden text-center mt-4">
+                <svg class="animate-spin h-6 w-6 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="text-blue-600">กำลังส่งข้อมูล...</p>
+            </div>
+
+            <!-- (ลบ Success Message div เดิม) -->
+            <!-- (ลบ Error Message div เดิม) -->
+
+        </form>
+    </div>
+
+    <!-- ===== Modal Clinical Risk ===== --><div id="clinicalModal" class="fixed inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden flex flex-col" style="max-height: 90vh;">
+            <!-- Modal Header --><div class="flex items-center justify-between p-5 border-b border-gray-200 bg-blue-50">
+                <h3 class="text-xl font-semibold text-blue-800">
+                    ระดับความเสี่ยงทางคลินิก (Clinical Risk) : A-I
+                </h3>
+                <button type="button" class="close-modal w-8 h-8 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-all flex items-center justify-center">
+                    &times;
+                </button>
+            </div>
+            <!-- Modal Body --><div class="p-6 sm:p-8 overflow-y-auto modal-body space-y-6">
+                <p class="text-gray-600">ใช้วัด "ระดับความรุนแรงของอันตรายที่เกิดขึ้นกับผู้ป่วย" (Patient Harm Index) โดยแบ่งตาม "ผลลัพธ์ที่เกิดขึ้นกับผู้ป่วย" ครับ</p>
+                
+                <div>
+                    <h4 class="font-semibold text-lg text-gray-800 mb-2">กลุ่มที่ 1: ยังไม่เกิดอันตราย (No Harm Events)</h4>
+                    <ul class="list-disc list-outside space-y-3 pl-5 text-gray-700">
+                        <li><strong>ระดับ A (Circumstances):</strong> สถานการณ์หรือสภาวะที่ <strong>อาจนำไปสู่</strong> ความผิดพลาด (ยังไม่เกิดเหตุการณ์) เช่น ฉลากยาคล้ายกัน</li>
+                        <li><strong>ระดับ B (Error, No Harm - Did not reach patient):</strong> เกิดความผิดพลาดแล้ว แต่ <strong>ยังมาไม่ถึงตัวผู้ป่วย</strong> (เช่น พยาบาลตรวจพบก่อน)</li>
+                        <li><strong>ระดับ C (Error, No Harm - Reached patient):</strong> ความผิดพลาด <strong>ไปถึงตัวผู้ป่วยแล้ว แต่ไม่ทำให้เกิดอันตราย</strong></li>
+                        <li><strong>ระดับ D (Error, No Harm - Required monitoring):</strong> ความผิดพลาดไปถึงตัวผู้ป่วย และ <strong>จำเป็นต้องมีการเฝ้าระวัง</strong> (แต่สุดท้ายก็ไม่เกิดอันตราย)</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="font-semibold text-lg text-gray-800 mb-2">กลุ่มที่ 2: เกิดอันตรายแล้ว (Harm Events)</h4>
+                    <ul class="list-disc list-outside space-y-3 pl-5 text-gray-700">
+                        <li><strong>ระดับ E (Error, Temporary Harm):</strong> ทำให้ผู้ป่วยได้รับ <strong>อันตรายชั่วคราว</strong> และ <strong>ต้องได้รับการรักษา</strong> (เช่น เกิดผื่นคัน)</li>
+                        <li><strong>ระดับ F (Error, Temporary Harm - Hospitalization):</strong> ทำให้เกิดอันตรายชั่วคราว และ <strong>ต้องนอนโรงพยาบาล</strong> หรือนอนนานขึ้น</li>
+                        <li><strong>ระดับ G (Error, Permanent Harm):</strong> ทำให้ผู้ป่วยได้รับ <strong>อันตรายถาวร</strong> หรือพิการ</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="font-semibold text-lg text-gray-800 mb-2">กลุ่มที่ 3: เกิดอันตรายรุนแรงถึงชีวิต (Severe Harm / Death)</h4>
+                    <ul class="list-disc list-outside space-y-3 pl-5 text-gray-700">
+                        <li><strong>ระดับ H (Error, Near Death Event):</strong> <strong>เกือบทำให้ผู้ป่วยเสียชีวิต</strong> (เช่น ต้อง CPR)</li>
+                        <li><strong>ระดับ I (Error, Death):</strong> เป็นสาเหตุ <strong>ทำให้ผู้ป่วยเสียชีวิต</strong></li>
+                    </ul>
+                </div>
+            </div>
+            <!-- Modal Footer --><div class="p-4 bg-gray-50 border-t border-gray-200 text-right">
+                <button type="button" class="close-modal bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-all">
+                    ปิด
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Modal Non-Clinical Risk ===== --><div id="nonClinicalModal" class="fixed inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden flex flex-col" style="max-height: 90vh;">
+            <!-- Modal Header --><div class="flex items-center justify-between p-5 border-b border-gray-200 bg-green-50">
+                <h3 class="text-xl font-semibold text-green-800">
+                    ระดับความเสี่ยงที่ไม่ใช่ทางคลินิก (Non-Clinical Risk) : 1-4
+                </h3>
+                <button type="button" class="close-modal w-8 h-8 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-all flex items-center justify-center">
+                    &times;
+                </button>
+            </div>
+            <!-- Modal Body --><div class="p-6 sm:p-8 overflow-y-auto modal-body space-y-6">
+                <p class="text-gray-600">ใช้วัด "ผลกระทบต่อองค์กร" (Organizational Impact) ในด้านต่างๆ เช่น การเงิน, การดำเนินงาน, ชื่อเสียง, หรือกฎหมาย</p>
+                
+                <ul class="space-y-4 text-gray-700">
+                    <li>
+                        <strong class="font-semibold text-lg text-gray-800">ระดับ 1: ผลกระทบเล็กน้อย (Minor)</strong>
+                        <p class="pl-4">ปัญหาเล็กน้อย แก้ไขได้ทันที ไม่ส่งผลกระทบต่อการบริการหลัก (เช่น หลอดไฟเสีย)</p>
+                    </li>
+                    <li>
+                        <strong class="font-semibold text-lg text-gray-800">ระดับ 2: ผลกระทบปานกลาง (Moderate)</strong>
+                        <p class="pl-4">ส่งผลกระทบต่อการดำเนินงานบางส่วน ต้องใช้เวลาและทรัพยากร (เช่น ระบบนัดล่ม 2 ชม.)</p>
+                    </li>
+                    <li>
+                        <strong class="font-semibold text-lg text-gray-800">ระดับ 3: ผลกระทบรุนแรง (Major)</strong>
+                        <p class="pl-4">ส่งผลกระทบต่อการบริการหลัก อาจทำให้เสียชื่อเสียง (เช่น ระบบ HIS ล่ม > 4 ชม.)</p>
+                    </li>
+                    <li>
+                        <strong class="font-semibold text-lg text-gray-800">ระดับ 4: ผลกระทบรุนแรงมาก/หายนะ (Severe)</strong>
+                        <p class="pl-4">ทำให้การดำเนินงานหยุดชะงัก ผิดกฎหมายร้ายแรง (เช่น เกิดอัคคีภัย)</p>
+                    </li>
+                </ul>
+            </div>
+            <!-- Modal Footer --><div class="p-4 bg-gray-50 border-t border-gray-200 text-right">
+                <button type="button" class="close-modal bg-green-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-green-700 transition-all">
+                    ปิด
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== (เพิ่มใหม่) Feedback Modal ===== -->
+    <div id="feedbackModal" class="fixed inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden flex flex-col">
+            <!-- Modal Body -->
+            <div class="p-6 sm:p-8 text-center">
+                <!-- Success Icon -->
+                <div id="feedbackIconSuccess" class="hidden">
+                    <svg class="w-16 h-16 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <!-- Error Icon -->
+                <div id="feedbackIconError" class="hidden">
+                     <svg class="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                
+                <h3 id="feedbackTitle" class="text-2xl font-bold mb-2"></h3>
+                <p id="feedbackMessage" class="text-gray-600"></p>
+            </div>
+            <!-- Modal Footer -->
+            <div class="p-4 bg-gray-50 text-center">
+                <button type="button" id="feedbackCloseButton" class="w-full sm:w-auto bg-blue-600 text-white px-8 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-all">
+                    ปิด
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // !!! ================================================================== !!!
+        // !!! สำคัญมาก: กรุณาใส่ URL ของ Google Apps Script ที่คุณ Deploy แล้วที่นี่
+        // !!! ดูขั้นตอนการทำในคำอธิบายที่ผมให้ไปนะครับ
+        // !!! ================================================================== !!!
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx_FrwSNP2ms2V52QE7eP0kf-q33XJ6RaQE5nAC6sVA7aftcDggfwwLfs5oPidmjs7Jeg/exec"; 
+        // !!! ================================================================== !!!
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const riskForm = document.getElementById('riskForm');
+            const submitButton = document.getElementById('submitButton');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            
+            // (ลบตัวแปร successMessage และ errorMessage เดิม)
+
+            // --- Modal Logic (Clinical & Non-Clinical) ---
+            const clinicalModal = document.getElementById('clinicalModal');
+            const nonClinicalModal = document.getElementById('nonClinicalModal');
+            const openClinicalBtn = document.getElementById('openClinicalModal');
+            const openNonClinicalBtn = document.getElementById('openNonClinicalModal');
+            const closeButtons = document.querySelectorAll('.close-modal');
+
+            // --- (เพิ่มใหม่) Feedback Modal Logic ---
+            const feedbackModal = document.getElementById('feedbackModal');
+            const feedbackTitle = document.getElementById('feedbackTitle');
+            const feedbackMessage = document.getElementById('feedbackMessage');
+            const feedbackIconSuccess = document.getElementById('feedbackIconSuccess');
+            const feedbackIconError = document.getElementById('feedbackIconError');
+            const feedbackCloseButton = document.getElementById('feedbackCloseButton');
+
+            const openModal = (modal) => {
+                modal.classList.remove('hidden');
+                document.body.classList.add('modal-open');
+            };
+
+            const closeModal = (modal) => {
+                modal.classList.add('hidden');
+                // ตรวจสอบว่ามี modal อื่นเปิดอยู่หรือไม่ ก่อนจะลบคลาส
+                if (!clinicalModal.classList.contains('hidden') || 
+                    !nonClinicalModal.classList.contains('hidden') || 
+                    !feedbackModal.classList.contains('hidden')) {
+                    // ยังมี modal อื่นเปิดอยู่
+                } else {
+                    document.body.classList.remove('modal-open');
+                }
+            };
+
+            // (เพิ่มใหม่) ฟังก์ชันเปิด Feedback Modal
+            const openFeedbackModal = (title, message, isSuccess) => {
+                feedbackTitle.textContent = title;
+                feedbackMessage.textContent = message;
+                
+                if (isSuccess) {
+                    feedbackTitle.classList.remove('text-red-800');
+                    feedbackTitle.classList.add('text-green-800');
+                    feedbackIconSuccess.classList.remove('hidden');
+                    feedbackIconError.classList.add('hidden');
+                    feedbackCloseButton.classList.remove('bg-red-600', 'hover:bg-red-700');
+                    feedbackCloseButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                } else {
+                    feedbackTitle.classList.remove('text-green-800');
+                    feedbackTitle.classList.add('text-red-800');
+                    feedbackIconSuccess.classList.add('hidden');
+                    feedbackIconError.classList.remove('hidden');
+                    feedbackCloseButton.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                    feedbackCloseButton.classList.add('bg-red-600', 'hover:bg-red-700');
+                }
+                
+                openModal(feedbackModal);
+            };
+
+            // --- Event Listeners สำหรับ Modal ทั้งหมด ---
+            openClinicalBtn.addEventListener('click', () => openModal(clinicalModal));
+            openNonClinicalBtn.addEventListener('click', () => openModal(nonClinicalModal));
+
+            closeButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    closeModal(clinicalModal);
+                    closeModal(nonClinicalModal);
+                });
+            });
+            
+            clinicalModal.addEventListener('click', (e) => {
+                if (e.target === clinicalModal) closeModal(clinicalModal);
+            });
+            nonClinicalModal.addEventListener('click', (e) => {
+                if (e.target === nonClinicalModal) closeModal(nonClinicalModal);
+            });
+
+            // (เพิ่มใหม่) Event Listeners สำหรับ Feedback Modal
+            feedbackCloseButton.addEventListener('click', () => closeModal(feedbackModal));
+            feedbackModal.addEventListener('click', (e) => {
+                if (e.target === feedbackModal) closeModal(feedbackModal);
+            });
+
+            // --- (ปรับปรุง) Form Submission Logic ---
+            riskForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                // ตรวจสอบว่า SCRIPT_URL ถูกเปลี่ยนหรือยัง
+                if (SCRIPT_URL === "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") {
+                    openFeedbackModal(
+                        "เกิดข้อผิดพลาด!", 
+                        "กรุณาตั้งค่า SCRIPT_URL ในไฟล์ HTML ก่อนใช้งาน", 
+                        false
+                    );
+                    return;
+                }
+
+                // 1. แสดง Loading, ปิดปุ่ม
+                submitButton.disabled = true;
+                loadingSpinner.classList.remove('hidden');
+
+                // 2. รวบรวมข้อมูลจากฟอร์ม
+                const formData = new FormData(riskForm);
+                const data = Object.fromEntries(formData.entries());
+                
+                // เพิ่มวันที่ลงข้อมูล (Timestamp)
+                data.submissionDate = new Date().toISOString();
+
+                // 3. ส่งข้อมูลไปยัง Google Apps Script
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // <--- (แก้ไข) เปลี่ยนเป็น 'no-cors' เพื่อเลี่ยง CORS
+                    cache: 'no-cache',
+                    headers: {
+                        // 'Content-Type': 'application/json', // <--- (เหมือนเดิม) ลบออกเพื่อเลี่ยง Preflight
+                    },
+                    body: JSON.stringify(data), 
+                    redirect: 'follow',
+                })
+                .then(response => {
+                    // (แก้ไข) เมื่อใช้ 'no-cors', เราไม่สามารถอ่าน response.text() หรือ result.status ได้
+                    // การที่ .then() ทำงาน หมายความว่าเบราว์เซอร์ *ส่ง* ข้อมูลออกไปแล้ว (ไม่โดน CORS block)
+                    // เราจึง *สันนิษฐาน* ว่าสำเร็จ (Fire and Forget)
+                    
+                    loadingSpinner.classList.add('hidden');
+                    submitButton.disabled = false;
+                    
+                    openFeedbackModal(
+                        "ส่งข้อมูลสำเร็จ!", 
+                        "ขอบคุณสำหรับรายงานครับ (ข้อมูลถูกส่งไปยังเซิร์ฟเวอร์แล้ว)", 
+                        true
+                    );
+                    
+                    riskForm.reset(); // รีเซ็ตฟอร์ม
+                })
+                .catch(error => {
+                    // (แก้ไข) .catch() จะทำงานเมื่อเกิดข้อผิดพลาด *จริงๆ* เช่น เครือข่ายล่ม
+                    loadingSpinner.classList.add('hidden');
+                    submitButton.disabled = false;
+
+                    console.error('Error:', error);
+                    
+                    openFeedbackModal(
+                        "เกิดข้อผิดพลาด!", 
+                        `ไม่สามารถส่งข้อมูลได้: ${error.message}. กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต`, 
+                        false
+                    );
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+
