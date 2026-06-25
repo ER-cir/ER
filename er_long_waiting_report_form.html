@@ -127,6 +127,13 @@
                     </span>
                     <input type="password" id="sheetPasswordInput" placeholder="กรอกรหัสผ่าน 3 หลัก" class="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-xs focus:ring-2 focus:ring-clinical-600 focus:bg-white outline-none transition-all text-center tracking-widest font-bold">
                 </div>
+                
+                <!-- Remember Unlock Checkbox -->
+                <label class="flex items-center gap-2 mt-3 cursor-pointer justify-center select-none">
+                    <input type="checkbox" id="rememberUnlockInput" class="rounded text-clinical-700 focus:ring-clinical-600 h-4 w-4">
+                    <span class="text-xs text-slate-600 font-semibold">จำการปลดล็อกบนอุปกรณ์นี้ (บันทึกไว้ตลอด)</span>
+                </label>
+
                 <p id="passwordErrorMsg" class="text-[11px] text-rose-500 text-center font-semibold hidden">
                     <i class="fa-solid fa-triangle-exclamation mr-1"></i> รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง
                 </p>
@@ -262,7 +269,7 @@ function doPost(e) {
                             <p class="text-[10px] text-slate-500">รายงานข้อมูลผู้ป่วยรอนานส่งตรงถึงแอป Telegram ทันที</p>
                         </div>
                     </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
+                    <label class="relative inline-flex items-center cursor-pointer font-sans select-none">
                         <input type="checkbox" id="telegramEnabledInput" class="sr-only peer">
                         <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500"></div>
                     </label>
@@ -305,13 +312,20 @@ function doPost(e) {
                 </div>
             </div>
 
-            <div class="flex gap-3 border-t border-slate-100 pt-5">
-                <button onclick="toggleSheetsModal(false)" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2.5 rounded-xl text-xs transition-all">
-                    ปิดหน้าต่างนี้
+            <!-- Footer settings buttons -->
+            <div class="flex flex-wrap gap-2 justify-between border-t border-slate-100 pt-5">
+                <button onclick="lockSystemManually()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold py-2.5 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-lock"></i> ล็อกระบบคืน
                 </button>
-                <button onclick="saveSystemConfig()" class="flex-1 bg-clinical-700 hover:bg-clinical-800 text-white font-semibold py-2.5 rounded-xl text-xs transition-all shadow-md flex items-center justify-center gap-1.5">
-                    <i class="fa-solid fa-floppy-disk"></i> บันทึกการเชื่อมต่อทั้งหมด
-                </button>
+                
+                <div class="flex gap-2">
+                    <button onclick="toggleSheetsModal(false)" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2.5 px-4 rounded-xl text-xs transition-all">
+                        ปิดหน้าต่างนี้
+                    </button>
+                    <button onclick="saveSystemConfig()" class="bg-clinical-700 hover:bg-clinical-800 text-white font-semibold py-2.5 px-5 rounded-xl text-xs transition-all shadow-md flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-floppy-disk"></i> บันทึกการเชื่อมต่อทั้งหมด
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -406,22 +420,22 @@ function doPost(e) {
                         </div>
                         
                         <div class="space-y-3 bg-white p-4 rounded-xl border border-slate-200/80">
-                            <label class="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
+                            <label class="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer select-none">
                                 <input type="checkbox" id="causeNoDoc" onchange="updatePreview()" class="mt-1 rounded text-clinical-600 focus:ring-clinical-500 h-4 w-4">
                                 <span class="text-sm text-slate-700 font-semibold">แพทย์ไม่มาตรวจ</span>
                             </label>
                             
-                            <label class="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
+                            <label class="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer select-none">
                                 <input type="checkbox" id="causeEr" onchange="updatePreview()" class="mt-1 rounded text-clinical-600 focus:ring-clinical-500 h-4 w-4">
                                 <span class="text-sm text-slate-700">แพทย์ติด Pt Emergency <strong class="text-red-600 font-bold">ER</strong> (ห้องฉุกเฉิน)</span>
                             </label>
                             
-                            <label class="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
+                            <label class="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer select-none">
                                 <input type="checkbox" id="causeLr" onchange="updatePreview()" class="mt-1 rounded text-clinical-600 focus:ring-clinical-500 h-4 w-4">
                                 <span class="text-sm text-slate-700">แพทย์ติด Pt Emergency <strong class="text-orange-600 font-bold">LR</strong> (ห้องคลอด)</span>
                             </label>
                             
-                            <label class="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
+                            <label class="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer select-none">
                                 <input type="checkbox" id="causeIpd" onchange="updatePreview()" class="mt-1 rounded text-clinical-600 focus:ring-clinical-500 h-4 w-4">
                                 <span class="text-sm text-slate-700">แพทย์ติด Pt Emergency <strong class="text-sky-600 font-bold">IPD</strong> (หอผู้ป่วยใน)</span>
                             </label>
@@ -815,6 +829,10 @@ function doPost(e) {
             pwdInput.value = '';
             pwdInput.focus();
             document.getElementById('passwordErrorMsg').classList.add('hidden');
+            
+            // Sync checkbox with localStorage state
+            const isRemembered = localStorage.getItem('er_system_unlocked_v3') === 'true';
+            document.getElementById('rememberUnlockInput').checked = isRemembered;
         }
 
         // Closes passcode verification popup
@@ -827,9 +845,15 @@ function doPost(e) {
         function verifyPassword() {
             const pwdInput = document.getElementById('sheetPasswordInput');
             const errorMsg = document.getElementById('passwordErrorMsg');
+            const rememberUnlock = document.getElementById('rememberUnlockInput').checked;
             
             if (pwdInput.value === '003') {
                 isSheetUnlocked = true;
+                if (rememberUnlock) {
+                    localStorage.setItem('er_system_unlocked_v3', 'true');
+                } else {
+                    localStorage.removeItem('er_system_unlocked_v3');
+                }
                 closePasswordModal();
                 openActualSheetsModal();
                 triggerToast('ยืนยันรหัสผ่านสำเร็จแล้ว!');
@@ -873,10 +897,20 @@ function doPost(e) {
             }
         }
 
-        // Closes configuration settings and locks session immediately to prevent unauthorized access
+        // Closes configuration settings. Reset session state ONLY if remember state is false.
         function closeActualSheetsModal() {
             document.getElementById('sheetsModal').classList.add('hidden');
-            isSheetUnlocked = false; // Reset security lock state on close
+            if (localStorage.getItem('er_system_unlocked_v3') !== 'true') {
+                isSheetUnlocked = false; // Reset security lock state on close only if not remembered
+            }
+        }
+
+        // Manually locks the system and removes persistent remember session
+        function lockSystemManually() {
+            isSheetUnlocked = false;
+            localStorage.removeItem('er_system_unlocked_v3');
+            closeActualSheetsModal();
+            triggerToast('ล็อกระบบควบคุมและล้างประวัติการจำรหัสผ่านแล้ว', 'warning');
         }
 
         // Save Google Sheets & Telegram configurations
@@ -1009,6 +1043,11 @@ function doPost(e) {
                     verifyPassword();
                 }
             });
+
+            // Check if user has previously opted to remember unlocking
+            if (localStorage.getItem('er_system_unlocked_v3') === 'true') {
+                isSheetUnlocked = true;
+            }
 
             // Render Live Preview with current defaults
             updatePreview();
