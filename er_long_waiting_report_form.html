@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบบันทึกแบบรายงานสถานการณ์ ER (ส่งข้อมูลเข้า Google Sheets & Telegram)</title>
+    <!-- Tailwind CSS for high-quality utility styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for professional Thai/English look (Sarabun & Inter) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for medical icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Sarabun', 'Inter', sans-serif;
+        }
+        
+        /* Custom scrollbar for seamless premium UI */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Print-specific layout optimization to match exact official paper size */
+        @media print {
+            body {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                font-size: 11pt;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            .print-area {
+                display: block !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 1.5cm !important;
+                border: none !important;
+                box-shadow: none !important;
+                background-color: transparent !important;
+            }
+            @page {
+                size: A4;
+                margin: 0;
+            }
+        }
+    </style>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        clinical: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="h-full flex flex-col text-slate-800 relative bg-slate-50">
+
+    <!-- Custom non-blocking Toast notification system -->
+    <div id="customToast" class="no-print fixed top-6 right-6 z-50 transform translate-y-[-100px] opacity-0 pointer-events-none transition-all duration-300 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-800 max-w-sm">
+        <span id="toastIcon" class="text-xl"></span>
+        <div class="flex-1">
+            <p id="toastMessage" class="text-xs font-semibold leading-relaxed"></p>
+        </div>
+    </div>
+
+    <!-- Custom Secure Confirmation Modal -->
+    <div id="confirmModal" class="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 space-y-4">
+            <div class="flex items-center gap-3 text-red-600">
+                <span class="bg-red-50 p-3 rounded-full text-lg"><i class="fa-solid fa-circle-exclamation"></i></span>
+                <h4 class="font-bold text-slate-900">ยืนยันการดำเนินการ</h4>
+            </div>
+            <p id="confirmMessage" class="text-sm text-slate-600">คุณแน่ใจหรือไม่ว่าต้องการดำเนินการนี้?</p>
+            <div class="flex gap-3 pt-2">
+                <button id="confirmCancelBtn" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2.5 rounded-xl text-xs transition-all">ยกเลิก</button>
+                <button id="confirmApproveBtn" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-xl text-xs transition-all shadow-md">ยืนยันการลบ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Google Sheets & Telegram Secure Password Lock Modal -->
+    <div id="passwordModal" class="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 space-y-5">
+            <div class="text-center space-y-2">
+                <div class="inline-flex items-center justify-center bg-amber-50 text-amber-600 p-4 rounded-2xl text-2xl w-14 h-14 mx-auto">
+                    <i class="fa-solid fa-key"></i>
+                </div>
+                <h4 class="font-bold text-slate-900 text-base">ระบบล็อกการเชื่อมโยงข้อมูล</h4>
+                <p class="text-xs text-slate-500">กรุณากรอกรหัสผ่านเพื่อเข้าสู่การตั้งค่าระบบ</p>
+            </div>
+            
+            <div class="space-y-2">
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                        <i class="fa-solid fa-lock"></i>
+                    </span>
+                    <input type="password" id="sheetPasswordInput" placeholder="กรอกรหัสผ่าน 3 หลัก" class="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-xs focus:ring-2 focus:ring-clinical-600 focus:bg-white outline-none transition-all text-center tracking-widest font-bold">
+                </div>
+                <p id="passwordErrorMsg" class="text-[11px] text-rose-500 text-center font-semibold hidden">
+                    <i class="fa-solid fa-triangle-exclamation mr-1"></i> รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง
+                </p>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button onclick="closePasswordModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2.5 rounded-xl text-xs transition-all">ยกเลิก</button>
+                <button onclick="verifyPassword()" class="flex-1 bg-clinical-700 hover:bg-clinical-800 text-white font-semibold py-2.5 rounded-xl text-xs transition-all shadow-md">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Setup Modal (Google Sheets & Telegram Settings) -->
+    <div id="sheetsModal" class="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl border border-slate-100 space-y-6 my-8">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div class="flex items-center gap-3 text-clinical-700">
+                    <span class="bg-clinical-50 text-clinical-700 p-3 rounded-2xl text-xl flex items-center justify-center">
+                        <i class="fa-solid fa-gears"></i>
+                    </span>
+                    <div>
+                        <h4 class="font-bold text-slate-900">แผงควบคุมตั้งค่าระบบส่งข้อมูล</h4>
+                        <p class="text-xs text-slate-500">จัดการข้อมูล Google Sheets และระบบแจ้งเตือนผ่าน Telegram</p>
+                    </div>
+                </div>
+                <button onclick="toggleSheetsModal(false)" class="text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-50 transition-all">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Tab Buttons -->
+            <div class="flex border-b border-slate-200 gap-2">
+                <button id="tabSheetBtn" onclick="switchTab('sheet')" class="px-4 py-2 text-xs font-bold border-b-2 border-clinical-700 text-clinical-700 focus:outline-none transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-table"></i> Google Sheets
+                </button>
+                <button id="tabTelegramBtn" onclick="switchTab('telegram')" class="px-4 py-2 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 focus:outline-none transition-all flex items-center gap-1.5">
+                    <i class="fa-brands fa-telegram text-sky-500"></i> Telegram Alert
+                </button>
+            </div>
+
+            <!-- TAB 1: Google Sheets Config -->
+            <div id="tabSheetContent" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                        1. วางลิงก์ Google Apps Script Web App URL ที่นี่:
+                    </label>
+                    <input type="url" id="sheetUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-clinical-600 focus:bg-white outline-none transition-all">
+                    <p class="text-[10px] text-slate-400 mt-1">หลังจากนำโปรเจกต์สคริปต์ไปใช้เป็นแอปพลิเคชันเว็บแล้ว ให้คัดลอก URL มาใส่ที่นี่</p>
+                </div>
+
+                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs text-amber-900 space-y-2">
+                    <p class="font-bold flex items-center gap-1.5 text-amber-800">
+                        <i class="fa-solid fa-circle-info text-sm"></i>
+                        ขั้นตอนการตั้งค่าใช้งาน (เชื่อมไปยังชีตเป้าหมายหลัก):
+                    </p>
+                    <ol class="list-decimal pl-5 space-y-1 text-[11px] leading-relaxed text-amber-800">
+                        <li>เปิด Google Sheet ของคุณ <a href="https://docs.google.com/spreadsheets/d/1F09R3zQF98w9vitmTc8P6Fu2epjQ1k-oRSvqnwjsTzo/edit" target="_blank" class="underline font-bold text-emerald-700">คลิกที่นี่เพื่อเปิดแผ่นงาน</a></li>
+                        <li>เลือกเมนู <strong>ส่วนขยาย (Extensions)</strong> &gt; <strong>Apps Script</strong></li>
+                        <li>ลบโค้ดเริ่มต้นออกให้หมด แล้วคัดลอกโค้ดสคริปต์จากด้านล่างนี้ไปวาง</li>
+                        <li>กดปุ่ม <strong>บันทึก (รูปแผ่นดิสก์)</strong></li>
+                        <li>กดปุ่ม <strong>การทำให้ใช้งานได้ (Deploy)</strong> &gt; <strong>การทำให้ใช้งานได้ใหม่ (New deployment)</strong></li>
+                        <li>เลือกประเภทเป็น <strong>แอปพลิเคชันเว็บ (Web app)</strong></li>
+                        <li>ตั้งค่า ผู้มีสิทธิ์เข้าถึง (Who has access) เป็น <strong>ทุกคน (Anyone)</strong></li>
+                        <li>กดปุ่ม deploy จากนั้นคัดลอก <strong>URL แอปพลิเคชันเว็บ</strong> มาวางในช่องด้านบน</li>
+                    </ol>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-slate-700">โค้ด Apps Script สำหรับติดตั้ง (คัดลอกไปใช้งานได้ทันที):</span>
+                        <button onclick="copyAppsScriptCode()" class="text-xs text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1">
+                            <i class="fa-regular fa-copy"></i> คัดลอกโค้ด
+                        </button>
+                    </div>
+                    <textarea id="appsScriptCode" readonly class="w-full bg-slate-900 text-emerald-400 font-mono text-[10px] p-4 rounded-xl h-28 border border-slate-800 resize-none outline-none focus:ring-1 focus:ring-emerald-500 leading-relaxed">
+function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.openById("1F09R3zQF98w9vitmTc8P6Fu2epjQ1k-oRSvqnwjsTzo").getSheets()[0];
+    var data = JSON.parse(e.postData.contents);
+    
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow([
+        "วันเวลาบันทึกระบบ", "วันที่เกิดเหตุ", "เวรปฏิบัติงาน", "แพทย์เวร", 
+        "สาเหตุ: แพทย์ไม่มาตรวจ", "สาเหตุ: ติดเคส ER", "สาเหตุ: ติดเคส LR", "สาเหตุ: ติดเคส IPD", "สาเหตุอื่น ๆ",
+        "เวลาโทรตาม ผอ.", "เวลา ผอ. เดินทางมาถึง", "เหตุผลกรณี ผอ. ไม่มา",
+        "รายละเอียด Inchart", "สรุปรายละเอียดเหตุการณ์"
+      ]);
+    }
+    
+    sheet.appendRow([
+      data.createdAt || new Date().toLocaleString("th-TH"),
+      data.date || "",
+      data.shift || "",
+      data.doctor || "",
+      data.causes.noDoc ? "ใช่" : "ไม่ใช่",
+      data.causes.er ? "ใช่" : "ไม่ใช่",
+      data.causes.lr ? "ใช่" : "ไม่ใช่",
+      data.causes.ipd ? "ใช่" : "ไม่ใช่",
+      data.causes.other || "",
+      data.directorCall.callDirTime || "",
+      data.directorCall.dirArriveTime || "",
+      data.directorCall.dirNoShowReason || "",
+      data.inchart || "",
+      data.events || ""
+    ]);
+    
+    return ContentService.createTextOutput(JSON.stringify({"status": "success"}))
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeaders({
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, GET, OPTIONS'
+      });
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": error.toString()}))
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeaders({
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, GET, OPTIONS'
+      });
+  }
+}
+                    </textarea>
+                </div>
+            </div>
+
+            <!-- TAB 2: Telegram Settings Config -->
+            <div id="tabTelegramContent" class="space-y-4 hidden">
+                <div class="flex items-center justify-between bg-sky-50 border border-sky-100 rounded-2xl p-4">
+                    <div class="flex items-center gap-2.5">
+                        <span class="text-sky-500 text-2xl"><i class="fa-brands fa-telegram"></i></span>
+                        <div>
+                            <p class="text-xs font-bold text-slate-800">เปิดระบบส่งแจ้งเตือนด่วน Telegram</p>
+                            <p class="text-[10px] text-slate-500">รายงานข้อมูลผู้ป่วยรอนานส่งตรงถึงแอป Telegram ทันที</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="telegramEnabledInput" class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500"></div>
+                    </label>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                            Telegram Bot Token:
+                        </label>
+                        <input type="text" id="telegramTokenInput" value="8468139536:AAFw8ZVosFz75A_sXYqEjfsXP1yRNFJCITw" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-sky-500 focus:bg-white outline-none transition-all font-mono" placeholder="ป้อน Bot Token หลัก">
+                        <p class="text-[9px] text-emerald-600 mt-1 font-semibold"><i class="fa-solid fa-shield-halved"></i> ระบบรักษาความปลอดภัยเชื่อมต่อรหัสบอทสำเร็จ</p>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label class="block text-xs font-bold text-slate-700">
+                                Telegram Chat ID (กลุ่ม หรือผู้ใช้):
+                            </label>
+                            <span class="text-[10px] text-slate-400">กลุ่มจะเริ่มต้นด้วยเครื่องหมายลบ เช่น <code>-100xxxxxxxxx</code></span>
+                        </div>
+                        <input type="text" id="telegramChatIdInput" placeholder="ตัวอย่าง: -1004567890123 หรือ 987654321" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-sky-500 focus:bg-white outline-none transition-all font-mono">
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs text-slate-600 space-y-2">
+                    <p class="font-bold flex items-center gap-1 text-slate-700">
+                        <i class="fa-solid fa-lightbulb text-amber-500"></i> วิธีการหา Chat ID ใน Telegram:
+                    </p>
+                    <ul class="list-disc pl-5 space-y-1 text-[11px] text-slate-600 leading-relaxed">
+                        <li><strong>รับแจ้งเตือนส่วนตัว:</strong> ค้นหาบอทชื่อ <code>@userinfobot</code> ใน Telegram กด Start เพื่อรับ ID ของคุณมาวาง</li>
+                        <li><strong>รับแจ้งเตือนเข้ากลุ่ม:</strong> ดึงบอทของคุณเข้ากลุ่มปฏิบัติการ จากนั้นดึงบอทชื่อ <code>@GetChatID_Bot</code> เข้ากลุ่มเพื่อแจ้ง ID และคัดลอก ID (ติดลบ) มาใช้งาน</li>
+                    </ul>
+                </div>
+
+                <div class="pt-2">
+                    <button type="button" onclick="testTelegramAlert()" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-md flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-paper-plane animate-pulse"></i> ทดสอบส่งข้อความ Telegram (Test Alert)
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex gap-3 border-t border-slate-100 pt-5">
+                <button onclick="toggleSheetsModal(false)" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2.5 rounded-xl text-xs transition-all">
+                    ปิดหน้าต่างนี้
+                </button>
+                <button onclick="saveSystemConfig()" class="flex-1 bg-clinical-700 hover:bg-clinical-800 text-white font-semibold py-2.5 rounded-xl text-xs transition-all shadow-md flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-floppy-disk"></i> บันทึกการเชื่อมต่อทั้งหมด
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Navigation Bar (No Print) -->
+    <header class="no-print bg-clinical-900 text-white shadow-md border-b border-clinical-800 z-10 shrink-0">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-red-500 text-white p-2.5 rounded-xl shadow-lg flex items-center justify-center">
+                    <i class="fa-solid fa-file-medical text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg md:text-xl font-bold tracking-tight">ระบบบันทึกแบบรายงานสถานการณ์ ER</h1>
+                    <p class="text-xs text-clinical-200">ตรวจสอบและอ้างอิงข้อมูลจากกระดาษโน้ตแพทย์/พยาบาลเวร</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button onclick="toggleSheetsModal(true)" class="bg-clinical-700 hover:bg-clinical-600 text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 shadow-md flex items-center gap-1.5">
+                    <i class="fa-solid fa-gears"></i>
+                    <span>ตั้งค่าระบบเชื่อมต่อ</span>
+                    <span id="sheetConnectionBadge" class="w-2.5 h-2.5 rounded-full bg-slate-400 border-2 border-clinical-900 inline-block"></span>
+                </button>
+                <button onclick="window.print()" class="bg-clinical-700 hover:bg-clinical-600 text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 shadow-md flex items-center gap-1.5">
+                    <i class="fa-solid fa-print"></i>
+                    <span>พิมพ์รายงาน / PDF</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto no-print">
+        <div class="max-w-4xl mx-auto p-4 md:p-8">
+            <div class="bg-white rounded-3xl shadow-xl border border-slate-200/80 p-6 md:p-8 space-y-8">
+                
+                <div class="border-b border-slate-100 pb-5">
+                    <span class="bg-clinical-50 text-clinical-700 text-xs font-bold px-3 py-1.5 rounded-full border border-clinical-100 uppercase tracking-wider">
+                        <i class="fa-solid fa-pen-to-square mr-1.5"></i> บันทึกข้อมูลรายงานคนไข้รอนาน เกิน 2 ชม.
+                    </span>
+                    <p class="text-xs text-slate-500 mt-2.5 leading-relaxed">กรอกรายละเอียดเพื่อบันทึกประวัติเข้าระบบภายในเครื่อง ส่งออกกระดาษ A4 หรือบันทึกอัปโหลดเข้าสู่ Google Sheet และส่งตรงหา Telegram ทันที</p>
+                </div>
+
+                <form id="erForm" class="space-y-6" onsubmit="event.preventDefault();">
+                    
+                    <!-- 1. วันที่ และ เวร -->
+                    <div class="bg-slate-50/70 p-5 rounded-2xl border border-slate-200/60 space-y-4">
+                        <div class="flex items-center gap-2.5 text-clinical-800 font-bold text-sm">
+                            <span class="bg-clinical-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono">1</span>
+                            <span>ข้อมูล วันที่ และ เวรปฏิบัติการ</span>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1.5">วันที่เกิดสถานการณ์</label>
+                                <input type="date" id="inputDate" oninput="updatePreview()" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-clinical-600 focus:border-clinical-600 outline-none transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1.5">เวรปฏิบัติงาน (Shift)</label>
+                                <select id="inputShift" onchange="updatePreview()" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-clinical-600 focus:border-clinical-600 outline-none transition-all">
+                                    <option value="">-- เลือกเวรปฏิบัติงาน --</option>
+                                    <option value="เวรเช้า">เวรเช้า (08:00 - 16:00 น.)</option>
+                                    <option value="เวรบ่าย">เวรบ่าย (16:00 - 24:00 น.)</option>
+                                    <option value="เวรดึก">เวรดึก (00:00 - 08:00 น.)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. แพทย์เวร -->
+                    <div class="bg-slate-50/70 p-5 rounded-2xl border border-slate-200/60 space-y-4">
+                        <div class="flex items-center gap-2.5 text-clinical-800 font-bold text-sm">
+                            <span class="bg-clinical-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono">2</span>
+                            <span>แพทย์เวรปฏิบัติหน้าที่</span>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">ชื่อแพทย์เวรประจำแผนก</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                                    <i class="fa-solid fa-user-doctor"></i>
+                                </span>
+                                <input type="text" id="inputDoctor" oninput="updatePreview()" placeholder="ระบุชื่อแพทย์เวรผู้รับผิดชอบ" class="w-full bg-white border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-clinical-600 focus:border-clinical-600 outline-none transition-all">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. สาเหตุที่รอพบแพทย์นาน -->
+                    <div class="bg-slate-50/70 p-5 rounded-2xl border border-slate-200/60 space-y-4">
+                        <div class="flex items-center gap-2.5 text-clinical-800 font-bold text-sm">
+                            <span class="bg-clinical-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono">3</span>
+                            <span>Pt รอพบแพทย์เกิน 2 ชม. เนื่องจากสาเหตุใด</span>
+                        </div>
+                        
+                        <div class="space-y-3 bg-white p-4 rounded-xl border border-slate-200/80">
+                            <label class="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
+                                <input type="checkbox" id="causeNoDoc" onchange="updatePreview()" class="mt-1 rounded text-clinical-600 focus:ring-clinical-500 h-4 w-4">
+                                <span class="text-sm text-slate-700 font-semibold">แพทย์ไม่มาตรวจ</span>
+                            </label>
+                            
+                            <label class="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
+                                <input type="checkbox" id="causeEr" onchange="updatePreview()" class="mt-1 rounded text-clinical-600 focus:ring-clinical-500 h-4 w-4">
+                                <span class="text-sm text-slate-700">แพทย์ติด Pt Emergency <strong class="text-red-600 font-bold">ER</strong> (ห้องฉุกเฉิน)</span>
+                            </label>
+                            
+                            <label class="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
+                                <input type="checkbox" id="causeLr" onchange="updatePreview()" class="mt-1 rounded text-clinical-600 focus:ring-clinical-500 h-4 w-4">
+                                <span class="text-sm text-slate-700">แพทย์ติด Pt Emergency <strong class="text-orange-600 font-bold">LR</strong> (ห้องคลอด)</span>
+                            </label>
+                            
+                            <label class="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
+                                <input type="checkbox" id="causeIpd" onchange="updatePreview()" class="mt-1 rounded text-clinical-600 focus:ring-clinical-500 h-4 w-4">
+                                <span class="text-sm text-slate-700">แพทย์ติด Pt Emergency <strong class="text-sky-600 font-bold">IPD</strong> (หอผู้ป่วยใน)</span>
+                            </label>
+
+                            <div class="border-t border-slate-100 pt-3 mt-2">
+                                <label class="block text-xs font-bold text-slate-600 mb-1.5">ระบุสาเหตุอื่นๆ เพิ่มเติม (ถ้ามี)</label>
+                                <input type="text" id="causeOther" oninput="updatePreview()" placeholder="เช่น ปริมาณคนไข้หนาแน่นมาก, ติดเคสทำหัตถการด่วน..." class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-clinical-600 focus:border-clinical-600 outline-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. โทรหา ผอ. -->
+                    <div class="bg-slate-50/70 p-5 rounded-2xl border border-slate-200/60 space-y-4">
+                        <div class="flex items-center gap-2.5 text-clinical-800 font-bold text-sm">
+                            <span class="bg-clinical-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono">4</span>
+                            <span>4. โทรหา ผอ.</span>
+                        </div>
+
+                        <div class="space-y-4 bg-white p-4 rounded-xl border border-slate-200/80">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- โทรตาม เวลา -->
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">
+                                        <i class="fa-solid fa-phone text-slate-400 mr-1.5"></i>โทรตาม เวลา
+                                    </label>
+                                    <input type="time" id="callDirTime" oninput="updatePreview()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-clinical-600 outline-none">
+                                </div>
+
+                                <!-- มา เวลา -->
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">
+                                        <i class="fa-solid fa-user-check text-slate-400 mr-1.5"></i>มา เวลา
+                                    </label>
+                                    <input type="time" id="dirArriveTime" oninput="updatePreview()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-clinical-600 outline-none">
+                                </div>
+                            </div>
+
+                            <!-- ไม่มา เพราะ -->
+                            <div class="border-t border-slate-100 pt-3">
+                                <label class="block text-xs font-semibold text-slate-600 mb-1.5">
+                                    <i class="fa-solid fa-triangle-exclamation text-slate-400 mr-1.5"></i>ไม่มา เพราะ
+                                </label>
+                                <textarea id="dirNoShowReason" oninput="updatePreview()" rows="2" placeholder="ระบุเหตุผลกรณีผู้อำนวยการไม่สามารถเดินทางมาได้..." class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-clinical-600 resize-none"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5. Inchart -->
+                    <div class="bg-slate-50/70 p-5 rounded-2xl border border-slate-200/60 space-y-4">
+                        <div class="flex items-center gap-2.5 text-clinical-800 font-bold text-sm">
+                            <span class="bg-clinical-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono">5</span>
+                            <span>5. Inchart</span>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">รายละเอียดความคืบหน้า (Inchart)</label>
+                            <textarea id="inputInchart" oninput="updatePreview()" rows="2.5" placeholder="กรอกข้อมูลความคืบหน้าการนำส่งชาร์ต หรือรายละเอียดอื่นๆ ตามแบบฟอร์ม" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-clinical-600 focus:border-clinical-600 outline-none transition-all resize-none"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- 6. สรุปเหตุการณ์ในเวร -->
+                    <div class="bg-slate-50/70 p-5 rounded-2xl border border-slate-200/60 space-y-4">
+                        <div class="flex items-center gap-2.5 text-clinical-800 font-bold text-sm">
+                            <span class="bg-clinical-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono">6</span>
+                            <span>6. สรุปเหตุการณ์ / เหตุการณ์ในเวร</span>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">รายละเอียดเหตุการณ์ ปัญหาและการแก้ไขทางคลินิก</label>
+                            <textarea id="inputEvents" oninput="updatePreview()" rows="3.5" placeholder="ระบุสรุปเหตุการณ์โดยย่อเพื่อแสดงผลและจัดเก็บในระบบ" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-clinical-600 focus:border-clinical-600 outline-none transition-all"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Actions buttons -->
+                    <div class="flex flex-col sm:flex-row gap-3 pt-3">
+                        <button type="button" id="saveSubmitBtn" onclick="saveToHistory()" class="flex-1 bg-clinical-700 hover:bg-clinical-800 text-white font-bold py-3.5 px-5 rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <span id="saveBtnText">บันทึกลงประวัติและส่งข้อมูล</span>
+                        </button>
+                        <button type="button" onclick="resetForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-3.5 px-5 rounded-xl text-sm transition-all flex items-center justify-center gap-2 border border-slate-200">
+                            <i class="fa-solid fa-rotate-left"></i>
+                            <span>ล้างค่าฟอร์ม</span>
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- History Log Section -->
+                <div class="border-t border-slate-200 pt-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-clinical-600"></i>
+                            <span>ประวัติการบันทึกรายงานย้อนหลังในระบบ</span>
+                        </h3>
+                        <span id="historyCount" class="bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-full font-bold">0 รายการ</span>
+                    </div>
+                    
+                    <div id="historyList" class="space-y-3 max-h-64 overflow-y-auto pr-1">
+                        <div class="text-xs text-slate-400 text-center py-8 border-2 border-dashed border-slate-200 rounded-2xl">
+                            <i class="fa-solid fa-folder-open text-xl mb-1.5 block text-slate-300"></i>
+                            ไม่มีประวัติบันทึกในอุปกรณ์นี้
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Hidden Print Area Template (Only visible when printing A4) -->
+    <div id="printTemplate" class="print-area hidden bg-white w-[210mm] min-h-[297mm] p-12 text-black">
+        
+        <!-- Form Content Container -->
+        <div class="space-y-8 flex flex-col justify-between h-full">
+            
+            <div class="space-y-6">
+                <!-- Head Title Section -->
+                <div class="flex justify-between items-start border-b-2 border-black pb-4">
+                    <div class="space-y-1">
+                        <h2 class="text-2xl font-bold tracking-tight font-sans">แบบรายงานสถานการณ์ ER</h2>
+                        <p class="text-lg font-bold">กรณีผู้ป่วยรอนาน เกิน 2 ชั่วโมง</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="inline-block border-2 border-red-600 text-red-600 font-bold px-3 py-1.5 text-sm rounded uppercase tracking-wide">
+                            เกิน 2 ชม.
+                        </span>
+                        <p class="text-[9px] text-slate-400 mt-1 font-mono">Ref: photo_2026-06-25_12-32-23.jpg</p>
+                    </div>
+                </div>
+
+                <!-- Section ① & ②: Date, Shift, and Doctors -->
+                <div class="space-y-5 py-2 border-b border-slate-200">
+                    <!-- ① วันที่... เวร... เกิน 2 ชม -->
+                    <div class="flex flex-wrap items-baseline gap-x-2 gap-y-3 text-sm">
+                        <span class="font-bold flex items-center gap-1 shrink-0">
+                            <span class="border border-black text-xs w-5 h-5 rounded-full flex items-center justify-center font-mono font-bold">1</span>
+                            วันที่
+                        </span>
+                        <span class="border-b border-dashed border-slate-400 px-3 min-w-[200px] font-semibold text-slate-800 text-center" id="prevDate">......................................................</span>
+                        
+                        <span class="font-bold shrink-0">เวร</span>
+                        <span class="border-b border-dashed border-slate-400 px-3 min-w-[150px] font-semibold text-slate-800 text-center" id="prevShift">......................................................</span>
+                        
+                        <span class="font-bold text-red-700 text-xs bg-red-50 border border-red-200 px-2 py-0.5 rounded ml-auto">เกิน 2 ชม.</span>
+                    </div>
+
+                    <!-- ② แพทย์เวร -->
+                    <div class="flex flex-wrap items-baseline gap-x-2 gap-y-3 text-sm">
+                        <span class="font-bold flex items-center gap-1 shrink-0">
+                            <span class="border border-black text-xs w-5 h-5 rounded-full flex items-center justify-center font-mono font-bold">2</span>
+                            แพทย์เวร
+                        </span>
+                        <span class="border-b border-dashed border-slate-400 px-3 flex-1 min-w-[250px] font-semibold text-slate-800" id="prevDoctor">........................................................................................................................</span>
+                    </div>
+                </div>
+
+                <!-- Section ③: Pt รอพบเกิน 2 ชม. -->
+                <div class="space-y-4 border-b border-slate-200 pb-5">
+                    <div class="text-sm font-bold flex items-center gap-2">
+                        <span class="border border-black text-xs w-5 h-5 rounded-full flex items-center justify-center font-mono font-bold">3</span>
+                        <span>Pt รอพบเกิน 2 ชม. สาเหตุ:</span>
+                    </div>
+                    
+                    <div class="pl-7 grid grid-cols-2 gap-4 text-sm">
+                        <div class="flex items-center gap-3">
+                            <div id="boxNoDoc" class="w-5 h-5 border border-black rounded flex items-center justify-center font-bold"></div>
+                            <span class="text-slate-800 font-semibold">- แพทย์ไม่มาตรวจ</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div id="boxEr" class="w-5 h-5 border border-black rounded flex items-center justify-center font-bold"></div>
+                            <span class="text-slate-800 font-semibold">- แพทย์ติด Pt emergency ER</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div id="boxLr" class="w-5 h-5 border border-black rounded flex items-center justify-center font-bold"></div>
+                            <span class="text-slate-800 font-semibold">- แพทย์ติด Pt emergency LR</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div id="boxIpd" class="w-5 h-5 border border-black rounded flex items-center justify-center font-bold"></div>
+                            <span class="text-slate-800 font-semibold">- แพทย์ติด Pt emergency IPD</span>
+                        </div>
+                    </div>
+                    
+                    <div class="pl-7 pt-1 flex items-baseline gap-2 text-xs">
+                        <span class="text-slate-500 font-bold shrink-0">สาเหตุเพิ่มเติม:</span>
+                        <span class="border-b border-dashed border-slate-400 px-2 flex-grow font-semibold text-slate-800 min-h-[1.5rem]" id="prevOther">........................................................................................................................</span>
+                    </div>
+                </div>
+
+                <!-- Section ④: โทรหา ผอ. -->
+                <div class="space-y-4 border-b border-slate-200 pb-5">
+                    <div class="text-sm font-bold flex items-center gap-2">
+                        <span class="border border-black text-xs w-5 h-5 rounded-full flex items-center justify-center font-mono font-bold">4</span>
+                        <span>โทรหา ผอ.</span>
+                    </div>
+                    
+                    <div class="pl-7 space-y-4 text-sm">
+                        <div class="flex flex-wrap items-baseline gap-2">
+                            <span class="text-slate-700 shrink-0 font-semibold">- โทรตาม เวลา</span>
+                            <span class="border-b border-dashed border-slate-400 px-3 min-w-[150px] font-bold text-slate-800 text-center" id="prevCallDirTime">........................ น.</span>
+                            
+                            <span class="text-slate-700 shrink-0 font-semibold ml-6">- มา เวลา</span>
+                            <span class="border-b border-dashed border-slate-400 px-3 min-w-[150px] font-bold text-slate-800 text-center" id="prevDirArriveTime">........................ น.</span>
+                        </div>
+                        
+                        <div class="flex flex-wrap items-baseline gap-2">
+                            <span class="text-slate-700 shrink-0 font-semibold">- ไม่มา เพราะ:</span>
+                            <span class="border-b border-dashed border-slate-400 px-2 flex-grow font-semibold text-slate-800 min-h-[1.5rem]" id="prevDirNoShowReason">........................................................................................................................</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section ⑤: Inchart -->
+                <div class="space-y-3 border-b border-slate-200 pb-5">
+                    <div class="text-sm font-bold flex items-center gap-2">
+                        <span class="border border-black text-xs w-5 h-5 rounded-full flex items-center justify-center font-mono font-bold">5</span>
+                        <span>Inchart</span>
+                    </div>
+                    <div class="pl-7">
+                        <p class="text-sm text-slate-800 leading-relaxed min-h-[3rem] border-b border-dashed border-slate-400 pb-1" id="prevInchart">
+                            ........................................................................................................................................................................................................................
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Section ⑥: สรุปเหตุการณ์ในเวร -->
+                <div class="space-y-3">
+                    <div class="text-sm font-bold flex items-center gap-2">
+                        <span class="border border-black text-xs w-5 h-5 rounded-full flex items-center justify-center font-mono font-bold">6</span>
+                        <span>สรุปเหตุการณ์ / เหตุการณ์ในเวร</span>
+                    </div>
+                    <div class="pl-7">
+                        <div class="text-sm text-slate-800 leading-relaxed min-h-[7rem] border border-slate-200 bg-slate-50/20 p-4 rounded-xl whitespace-pre-line" id="prevEvents">
+                            ........................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer and Official Signature -->
+            <div class="pt-8 border-t border-slate-300 flex flex-col sm:flex-row justify-between items-end gap-6 text-xs text-slate-500">
+                <div>
+                    <p>จัดทำรายงานโดย: ระบบบันทึกเวชระเบียน แผนกอุบัติเหตุและฉุกเฉิน (ER)</p>
+                    <p class="mt-1">วันที่และเวลาที่ดึงรายงาน: <span id="printDateStamp" class="font-semibold">-</span></p>
+                </div>
+                <div class="text-center min-w-[240px] border-t border-slate-300 pt-3">
+                    <p class="font-bold text-slate-800">( ลงชื่อ ) ___________________________________ ผู้รายงาน</p>
+                    <p class="text-[10px] mt-1.5 text-slate-400">ตำแหน่ง พยาบาลวิชาชีพเวรปฏิบัติการประจำแผนก</p>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Application Logic & Scripts -->
+    <script>
+        // DOM Input Elements
+        const formElements = {
+            date: document.getElementById('inputDate'),
+            shift: document.getElementById('inputShift'),
+            doctor: document.getElementById('inputDoctor'),
+            causeNoDoc: document.getElementById('causeNoDoc'),
+            causeEr: document.getElementById('causeEr'),
+            causeLr: document.getElementById('causeLr'),
+            causeIpd: document.getElementById('causeIpd'),
+            causeOther: document.getElementById('causeOther'),
+            callDirTime: document.getElementById('callDirTime'),
+            dirArriveTime: document.getElementById('dirArriveTime'),
+            dirNoShowReason: document.getElementById('dirNoShowReason'),
+            inchart: document.getElementById('inputInchart'),
+            events: document.getElementById('inputEvents')
+        };
+
+        // DOM Preview Elements (Print template sync destination)
+        const previewElements = {
+            date: document.getElementById('prevDate'),
+            shift: document.getElementById('prevShift'),
+            doctor: document.getElementById('prevDoctor'),
+            boxNoDoc: document.getElementById('boxNoDoc'),
+            boxEr: document.getElementById('boxEr'),
+            boxLr: document.getElementById('boxLr'),
+            boxIpd: document.getElementById('boxIpd'),
+            other: document.getElementById('prevOther'),
+            callDirTime: document.getElementById('prevCallDirTime'),
+            dirArriveTime: document.getElementById('prevDirArriveTime'),
+            dirNoShowReason: document.getElementById('prevDirNoShowReason'),
+            inchart: document.getElementById('prevInchart'),
+            events: document.getElementById('prevEvents'),
+            printDate: document.getElementById('printDateStamp')
+        };
+
+        // Local Storage database keys
+        const LOCAL_STORAGE_KEY = 'er_waiting_logs_v3';
+        const GOOGLE_SHEETS_CONFIG_KEY = 'er_google_sheets_config_v1';
+        const TELEGRAM_CONFIG_KEY = 'er_telegram_config_v1';
+
+        // State control for locked settings
+        let isSheetUnlocked = false;
+
+        // Custom UI Notification toast replacement for alert()
+        function triggerToast(message, status = 'success') {
+            const toast = document.getElementById('customToast');
+            const icon = document.getElementById('toastIcon');
+            const msg = document.getElementById('toastMessage');
+
+            msg.textContent = message;
+            if (status === 'success') {
+                icon.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400"></i>';
+                toast.className = toast.className.replace(/bg-red-950|bg-slate-900|bg-amber-950|bg-sky-950/, 'bg-slate-900');
+            } else if (status === 'warning') {
+                icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-400"></i>';
+                toast.className = toast.className.replace(/bg-slate-900|bg-red-950|bg-sky-950/, 'bg-amber-950');
+            } else if (status === 'sky') {
+                icon.innerHTML = '<i class="fa-brands fa-telegram text-sky-400"></i>';
+                toast.className = toast.className.replace(/bg-slate-900|bg-red-950|bg-amber-950/, 'bg-sky-950');
+            } else {
+                icon.innerHTML = '<i class="fa-solid fa-circle-exclamation text-rose-500"></i>';
+                toast.className = toast.className.replace(/bg-slate-900|bg-amber-950|bg-sky-950/, 'bg-red-950');
+            }
+
+            // Slide in Toast
+            toast.classList.remove('translate-y-[-100px]', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-[-100px]', 'opacity-0', 'pointer-events-none');
+                toast.classList.remove('translate-y-0', 'opacity-100');
+            }, 4000);
+        }
+
+        // Custom Safe Confirmation replacement for confirm()
+        let confirmCallBack = null;
+        function triggerConfirm(message, callback) {
+            const modal = document.getElementById('confirmModal');
+            const confirmMsg = document.getElementById('confirmMessage');
+            
+            confirmMsg.textContent = message;
+            modal.classList.remove('hidden');
+            confirmCallBack = callback;
+        }
+
+        // Setup custom event handler buttons for confirmation modal
+        document.getElementById('confirmCancelBtn').addEventListener('click', () => {
+            document.getElementById('confirmModal').classList.add('hidden');
+            confirmCallBack = null;
+        });
+
+        document.getElementById('confirmApproveBtn').addEventListener('click', () => {
+            document.getElementById('confirmModal').classList.add('hidden');
+            if (confirmCallBack) {
+                confirmCallBack();
+                confirmCallBack = null;
+            }
+        });
+
+        // Tab Switcher inside the Settings Modal
+        function switchTab(tabName) {
+            const tabSheetBtn = document.getElementById('tabSheetBtn');
+            const tabTelegramBtn = document.getElementById('tabTelegramBtn');
+            const tabSheetContent = document.getElementById('tabSheetContent');
+            const tabTelegramContent = document.getElementById('tabTelegramContent');
+
+            if (tabName === 'sheet') {
+                tabSheetBtn.className = "px-4 py-2 text-xs font-bold border-b-2 border-clinical-700 text-clinical-700 focus:outline-none transition-all flex items-center gap-1.5";
+                tabTelegramBtn.className = "px-4 py-2 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 focus:outline-none transition-all flex items-center gap-1.5";
+                tabSheetContent.classList.remove('hidden');
+                tabTelegramContent.classList.add('hidden');
+            } else {
+                tabSheetBtn.className = "px-4 py-2 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 focus:outline-none transition-all flex items-center gap-1.5";
+                tabTelegramBtn.className = "px-4 py-2 text-xs font-bold border-b-2 border-sky-500 text-sky-600 focus:outline-none transition-all flex items-center gap-1.5";
+                tabSheetContent.classList.add('hidden');
+                tabTelegramContent.classList.remove('hidden');
+            }
+        }
+
+        // Google Sheet Setup Modal & Security Controller
+        function toggleSheetsModal(show) {
+            if (show) {
+                if (isSheetUnlocked) {
+                    openActualSheetsModal();
+                } else {
+                    openPasswordModal();
+                }
+            } else {
+                closeActualSheetsModal();
+            }
+        }
+
+        // Opens passcode verification popup
+        function openPasswordModal() {
+            document.getElementById('passwordModal').classList.remove('hidden');
+            const pwdInput = document.getElementById('sheetPasswordInput');
+            pwdInput.value = '';
+            pwdInput.focus();
+            document.getElementById('passwordErrorMsg').classList.add('hidden');
+        }
+
+        // Closes passcode verification popup
+        function closePasswordModal() {
+            document.getElementById('passwordModal').classList.add('hidden');
+            document.getElementById('sheetPasswordInput').value = '';
+        }
+
+        // Verifies entered secure passcode (Must be "003")
+        function verifyPassword() {
+            const pwdInput = document.getElementById('sheetPasswordInput');
+            const errorMsg = document.getElementById('passwordErrorMsg');
+            
+            if (pwdInput.value === '003') {
+                isSheetUnlocked = true;
+                closePasswordModal();
+                openActualSheetsModal();
+                triggerToast('ยืนยันรหัสผ่านสำเร็จแล้ว!');
+            } else {
+                errorMsg.classList.remove('hidden');
+                pwdInput.value = '';
+                pwdInput.focus();
+                triggerToast('รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง', 'error');
+            }
+        }
+
+        // Opens the actual configuration settings page
+        function openActualSheetsModal() {
+            const modal = document.getElementById('sheetsModal');
+            modal.classList.remove('hidden');
+            switchTab('sheet'); // Default to sheet tab
+            
+            // Read Sheet Config
+            const savedUrl = localStorage.getItem(GOOGLE_SHEETS_CONFIG_KEY);
+            if (savedUrl) {
+                document.getElementById('sheetUrlInput').value = savedUrl;
+            } else {
+                document.getElementById('sheetUrlInput').value = '';
+            }
+
+            // Read Telegram Config
+            const telegramConfigStr = localStorage.getItem(TELEGRAM_CONFIG_KEY);
+            if (telegramConfigStr) {
+                try {
+                    const tConfig = JSON.parse(telegramConfigStr);
+                    document.getElementById('telegramEnabledInput').checked = !!tConfig.enabled;
+                    document.getElementById('telegramTokenInput').value = tConfig.token || "8468139536:AAFw8ZVosFz75A_sXYqEjfsXP1yRNFJCITw";
+                    document.getElementById('telegramChatIdInput').value = tConfig.chatId || "";
+                } catch (e) {
+                    console.error("Error reading Telegram configuration from storage", e);
+                }
+            } else {
+                document.getElementById('telegramEnabledInput').checked = false;
+                document.getElementById('telegramTokenInput').value = "8468139536:AAFw8ZVosFz75A_sXYqEjfsXP1yRNFJCITw";
+                document.getElementById('telegramChatIdInput').value = "";
+            }
+        }
+
+        // Closes configuration settings and locks session immediately to prevent unauthorized access
+        function closeActualSheetsModal() {
+            document.getElementById('sheetsModal').classList.add('hidden');
+            isSheetUnlocked = false; // Reset security lock state on close
+        }
+
+        // Save Google Sheets & Telegram configurations
+        function saveSystemConfig() {
+            // Validate Google Sheet URL
+            const urlInput = document.getElementById('sheetUrlInput').value.trim();
+            if (urlInput && !urlInput.startsWith('https://script.google.com/')) {
+                triggerToast('กรุณากรอกลิงก์ Web App URL จาก Google Apps Script ให้ถูกต้อง', 'error');
+                return;
+            }
+
+            // Save Google Sheet URL
+            if (urlInput) {
+                localStorage.setItem(GOOGLE_SHEETS_CONFIG_KEY, urlInput);
+            } else {
+                localStorage.removeItem(GOOGLE_SHEETS_CONFIG_KEY);
+            }
+
+            // Save Telegram Config
+            const telegramEnabled = document.getElementById('telegramEnabledInput').checked;
+            const telegramToken = document.getElementById('telegramTokenInput').value.trim();
+            const telegramChatId = document.getElementById('telegramChatIdInput').value.trim();
+
+            if (telegramEnabled && (!telegramToken || !telegramChatId)) {
+                triggerToast('กรุณากรอก Bot Token และ Chat ID ของ Telegram เมื่อต้องการเปิดแจ้งเตือน', 'error');
+                return;
+            }
+
+            const tConfig = {
+                enabled: telegramEnabled,
+                token: telegramToken || "8468139536:AAFw8ZVosFz75A_sXYqEjfsXP1yRNFJCITw",
+                chatId: telegramChatId
+            };
+            localStorage.setItem(TELEGRAM_CONFIG_KEY, JSON.stringify(tConfig));
+
+            triggerToast('บันทึกการเชื่อมต่อของระบบทั้งหมดเรียบร้อยแล้ว!');
+            updateConnectionBadge();
+            toggleSheetsModal(false);
+        }
+
+        // Test Telegram Connection Alert
+        async function testTelegramAlert() {
+            const token = document.getElementById('telegramTokenInput').value.trim() || "8468139536:AAFw8ZVosFz75A_sXYqEjfsXP1yRNFJCITw";
+            const chatId = document.getElementById('telegramChatIdInput').value.trim();
+
+            if (!chatId) {
+                triggerToast('กรุณาระบุ Chat ID ปลายทางก่อนทำการทดสอบระบบ', 'error');
+                return;
+            }
+
+            const testMessage = `<b>🔔 ทดสอบระบบแจ้งเตือน Telegram (ER Waiting Report)</b>\n\nการเชื่อมโยงระบบของคุณกับบอทบอร์ดสถานการณ์ ER สำเร็จแล้ว! บอทพร้อมทำงานเมื่อมีการบันทึกรายงานฉบับจริงในระบบ\n\n<i>ตรวจจับสัญญาณเวลา: ${new Date().toLocaleString('th-TH')} น.</i>`;
+            
+            triggerToast('กำลังเชื่อมต่อและจัดส่งข้อมูลทดสอบ...', 'sky');
+
+            try {
+                const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: chatId,
+                        text: testMessage,
+                        parse_mode: 'HTML'
+                    })
+                });
+
+                const resData = await response.json();
+                if (resData.ok) {
+                    triggerToast('บอทส่งข้อความทดสอบเข้า Telegram ของคุณสำเร็จแล้ว!', 'success');
+                } else {
+                    triggerToast(`บอทขัดข้อง: ${resData.description}`, 'error');
+                }
+            } catch (error) {
+                console.error("Telegram API Connection Failed", error);
+                triggerToast('ไม่สามารถส่งข้อความได้ กรุณาตรวจสอบอินเทอร์เน็ตหรือข้อมูลที่กรอก', 'error');
+            }
+        }
+
+        // Copy Apps Script boilerplate code to clipboard
+        function copyAppsScriptCode() {
+            const textarea = document.getElementById('appsScriptCode');
+            textarea.select();
+            document.execCommand('copy');
+            triggerToast('คัดลอกโค้ดสคริปต์ลงคลิปบอร์ดแล้ว!');
+        }
+
+        // Update connection status badge in UI header
+        function updateConnectionBadge() {
+            const badge = document.getElementById('sheetConnectionBadge');
+            const saveBtnText = document.getElementById('saveBtnText');
+            
+            const hasSheet = !!localStorage.getItem(GOOGLE_SHEETS_CONFIG_KEY);
+            let hasTelegram = false;
+            
+            const telegramConfigStr = localStorage.getItem(TELEGRAM_CONFIG_KEY);
+            if (telegramConfigStr) {
+                try {
+                    const tConfig = JSON.parse(telegramConfigStr);
+                    hasTelegram = !!(tConfig.enabled && tConfig.chatId);
+                } catch (e) {}
+            }
+            
+            if (hasSheet && hasTelegram) {
+                badge.className = "w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-slate-900 inline-block";
+                saveBtnText.textContent = "บันทึกประวัติ + ซิงค์ชีต + ส่ง Telegram";
+            } else if (hasSheet) {
+                badge.className = "w-2.5 h-2.5 rounded-full bg-amber-400 border-2 border-slate-900 inline-block";
+                saveBtnText.textContent = "บันทึกประวัติ + ซิงค์ Google Sheet";
+            } else if (hasTelegram) {
+                badge.className = "w-2.5 h-2.5 rounded-full bg-sky-400 border-2 border-slate-900 inline-block";
+                saveBtnText.textContent = "บันทึกประวัติ + ส่งแจ้งเตือน Telegram";
+            } else {
+                badge.className = "w-2.5 h-2.5 rounded-full bg-slate-400 border-2 border-slate-900 inline-block";
+                saveBtnText.textContent = "บันทึกลงประวัติในเครื่อง";
+            }
+        }
+
+        // Initialize Form Values & Setup Live Event Listeners on load
+        window.onload = function() {
+            // Set current date as default helper
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+
+            formElements.date.value = `${year}-${month}-${day}`;
+            
+            // Password verification keyboard enter trigger
+            document.getElementById('sheetPasswordInput').addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    verifyPassword();
+                }
+            });
+
+            // Render Live Preview with current defaults
+            updatePreview();
+            loadHistory();
+            updateConnectionBadge();
+        };
+
+        // Live Synchronizer from form fields to A4 document sheet template (for printing/save)
+        function updatePreview() {
+            const now = new Date();
+            previewElements.printDate.textContent = now.toLocaleString('th-TH', { hour12: false }) + ' น.';
+
+            // 1. Date and Shift
+            if (formElements.date.value) {
+                previewElements.date.textContent = formatThaiDate(formElements.date.value);
+            } else {
+                previewElements.date.textContent = '......................................................';
+            }
+
+            if (formElements.shift.value) {
+                previewElements.shift.textContent = formElements.shift.value;
+            } else {
+                previewElements.shift.textContent = '......................................................';
+            }
+
+            // 2. On-duty Doctor
+            if (formElements.doctor.value.trim()) {
+                previewElements.doctor.textContent = `นพ./พญ. ${formElements.doctor.value.trim()}`;
+            } else {
+                previewElements.doctor.textContent = '........................................................................................................................';
+            }
+
+            // 3. Checked Causes rendering
+            renderCheckboxStatus(formElements.causeNoDoc.checked, previewElements.boxNoDoc);
+            renderCheckboxStatus(formElements.causeEr.checked, previewElements.boxEr);
+            renderCheckboxStatus(formElements.causeLr.checked, previewElements.boxLr);
+            renderCheckboxStatus(formElements.causeIpd.checked, previewElements.boxIpd);
+
+            // 3.1 Other Causes
+            if (formElements.causeOther.value.trim()) {
+                previewElements.other.textContent = formElements.causeOther.value.trim();
+            } else {
+                previewElements.other.textContent = '........................................................................................................................';
+            }
+
+            // 4. Time logs (ผอ. Timeline)
+            previewElements.callDirTime.textContent = formElements.callDirTime.value ? `${formElements.callDirTime.value} น.` : '........................ น.';
+            previewElements.dirArriveTime.textContent = formElements.dirArriveTime.value ? `${formElements.dirArriveTime.value} น.` : '........................ น.';
+            
+            if (formElements.dirNoShowReason.value.trim()) {
+                previewElements.dirNoShowReason.textContent = formElements.dirNoShowReason.value.trim();
+            } else {
+                previewElements.dirNoShowReason.textContent = '........................................................................................................................';
+            }
+
+            // 5. Inchart
+            if (formElements.inchart.value.trim()) {
+                previewElements.inchart.textContent = formElements.inchart.value.trim();
+            } else {
+                previewElements.inchart.textContent = '........................................................................................................................................................................................................................';
+            }
+
+            // 6. Events Log
+            if (formElements.events.value.trim()) {
+                previewElements.events.textContent = formElements.events.value.trim();
+                previewElements.events.className = "text-sm text-slate-800 leading-relaxed min-h-[7rem] border border-slate-200 bg-slate-50/20 p-4 rounded-xl whitespace-pre-line";
+            } else {
+                previewElements.events.textContent = '........................................................................................................................................................................................................................................................................................................................................................................................................................................................................';
+                previewElements.events.className = "text-sm text-slate-400 leading-relaxed min-h-[7rem] border border-slate-200 bg-slate-50/20 p-4 rounded-xl whitespace-pre-line";
+            }
+        }
+
+        // Helper to display checkmark icons or empty block inside checkboxes inside the printing template
+        function renderCheckboxStatus(isChecked, element) {
+            if (isChecked) {
+                element.innerHTML = '<i class="fa-solid fa-check text-xs text-clinical-700"></i>';
+                element.className = "w-5 h-5 border-2 border-clinical-700 bg-clinical-50 rounded flex items-center justify-center font-bold";
+            } else {
+                element.innerHTML = '';
+                element.className = "w-5 h-5 border border-black rounded flex items-center justify-center font-bold";
+            }
+        }
+
+        // Utility to format standard yyyy-mm-dd format into elegant Thai date
+        function formatThaiDate(dateString) {
+            if (!dateString) return '';
+            const months = [
+                'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+            ];
+            const date = new Date(dateString);
+            const day = date.getDate();
+            const monthIndex = date.getMonth();
+            const year = date.getFullYear() + 543; // Convert to Buddhist Era (B.E.)
+            return `${day} ${months[monthIndex]} ${year}`;
+        }
+
+        // Main Save Function (Saves locally & Syncs to Google Sheet Web App & Telegram if available)
+        async function saveToHistory() {
+            // Form Validation before saving
+            if (!formElements.doctor.value.trim()) {
+                triggerToast('กรุณากรอกชื่อแพทย์เวรอย่างน้อย 1 ท่าน เพื่อบันทึกประวัติรายงาน', 'error');
+                return;
+            }
+
+            // Compile Current Form Payload
+            const reportPayload = {
+                id: Date.now().toString(),
+                date: formElements.date.value,
+                shift: formElements.shift.value,
+                doctor: formElements.doctor.value.trim(),
+                causes: {
+                    noDoc: formElements.causeNoDoc.checked,
+                    er: formElements.causeEr.checked,
+                    lr: formElements.causeLr.checked,
+                    ipd: formElements.causeIpd.checked,
+                    other: formElements.causeOther.value.trim()
+                },
+                directorCall: {
+                    callDirTime: formElements.callDirTime.value,
+                    dirArriveTime: formElements.dirArriveTime.value,
+                    dirNoShowReason: formElements.dirNoShowReason.value.trim()
+                },
+                inchart: formElements.inchart.value.trim(),
+                events: formElements.events.value.trim(),
+                createdAt: new Date().toLocaleString('th-TH')
+            };
+
+            // 1. Save Locally (Local Storage)
+            let historyList = [];
+            try {
+                const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+                if (stored) {
+                    historyList = JSON.parse(stored);
+                }
+            } catch (e) {
+                console.error("Failed to fetch from local storage", e);
+            }
+
+            historyList.unshift(reportPayload);
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(historyList));
+            loadHistory();
+
+            let isGoogleSheetsSuccess = false;
+            let isTelegramSuccess = false;
+
+            // 2. Sync to Google Sheets if Web App URL exists
+            const webAppUrl = localStorage.getItem(GOOGLE_SHEETS_CONFIG_KEY);
+            const telegramConfigStr = localStorage.getItem(TELEGRAM_CONFIG_KEY);
+            
+            let tConfig = null;
+            if (telegramConfigStr) {
+                try {
+                    tConfig = JSON.parse(telegramConfigStr);
+                } catch (e) {}
+            }
+
+            const needSync = webAppUrl || (tConfig && tConfig.enabled && tConfig.chatId);
+            
+            if (needSync) {
+                const submitBtn = document.getElementById('saveSubmitBtn');
+                const originalContent = submitBtn.innerHTML;
+                
+                try {
+                    // Set saving status to button
+                    submitBtn.disabled = true;
+                    submitBtn.className = submitBtn.className.replace('bg-clinical-700', 'bg-slate-400');
+                    submitBtn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> <span>กำลังจัดส่งข้อมูลระบบเชื่อมต่อ...</span>';
+
+                    // 2.1 Send Google Sheets Web App Request
+                    if (webAppUrl) {
+                        try {
+                            await fetch(webAppUrl, {
+                                method: 'POST',
+                                mode: 'no-cors',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(reportPayload)
+                            });
+                            isGoogleSheetsSuccess = true;
+                        } catch (sheetErr) {
+                            console.error("Google Sheets Sync Failure", sheetErr);
+                        }
+                    }
+
+                    // 2.2 Send Telegram Request
+                    if (tConfig && tConfig.enabled && tConfig.chatId) {
+                        try {
+                            const formattedMsg = buildTelegramMessage(reportPayload);
+                            const response = await fetch(`https://api.telegram.org/bot${tConfig.token}/sendMessage`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    chat_id: tConfig.chatId,
+                                    text: formattedMsg,
+                                    parse_mode: 'HTML'
+                                })
+                            });
+                            const telData = await response.json();
+                            if (telData.ok) {
+                                isTelegramSuccess = true;
+                            } else {
+                                console.error("Telegram API Error response", telData);
+                            }
+                        } catch (telErr) {
+                            console.error("Telegram Dispatch Failure", telErr);
+                        }
+                    }
+
+                    // Feedback messaging based on dispatch result
+                    if (webAppUrl && tConfig && tConfig.enabled && tConfig.chatId) {
+                        if (isGoogleSheetsSuccess && isTelegramSuccess) {
+                            triggerToast('บันทึกสำเร็จ ซิงค์ตารางชีต และส่งแจ้งเตือน Telegram แล้ว!', 'success');
+                        } else if (isGoogleSheetsSuccess) {
+                            triggerToast('บันทึกสำเร็จ ซิงค์ตารางชีตแล้ว แต่ส่งบอท Telegram ขัดข้อง', 'warning');
+                        } else if (isTelegramSuccess) {
+                            triggerToast('บันทึกสำเร็จ ส่งแจ้งเตือน Telegram แล้ว แต่ระบบชีตขัดข้อง', 'warning');
+                        } else {
+                            triggerToast('บันทึกข้อมูลในเครื่องแล้ว แต่การอัปโหลดภายนอกขัดข้องทั้งหมด', 'error');
+                        }
+                    } else if (webAppUrl) {
+                        triggerToast('บันทึกข้อมูลสำเร็จ และอัปโหลดไปยัง Google Sheets แล้ว!');
+                    } else if (tConfig && tConfig.enabled && tConfig.chatId) {
+                        if (isTelegramSuccess) {
+                            triggerToast('บันทึกสำเร็จ และส่งรายงานเข้ากลุ่ม Telegram เรียบร้อยแล้ว!', 'success');
+                        } else {
+                            triggerToast('บันทึกสำเร็จในเครื่อง แต่ไม่สามารถเชื่อมต่อส่งบอท Telegram ได้', 'error');
+                        }
+                    }
+
+                } catch (error) {
+                    console.error("System Dispatch Error", error);
+                    triggerToast('บันทึกลงเครื่องแล้ว แต่ระบบเครือข่ายส่งต่อขัดข้อง', 'error');
+                } finally {
+                    // Revert button status
+                    submitBtn.disabled = false;
+                    submitBtn.className = submitBtn.className.replace('bg-slate-400', 'bg-clinical-700');
+                    submitBtn.innerHTML = originalContent;
+                }
+            } else {
+                triggerToast('บันทึกรายงานลงในฐานข้อมูลเครื่องเรียบร้อย (เชื่อมโยงในแผงตั้งค่าเพื่อเปิดระบบออนไลน์)');
+            }
+        }
+
+        // Builder function to output a beautifully styled, bold clinical message for Telegram HTML parser
+        function buildTelegramMessage(data) {
+            const thaiDate = formatThaiDate(data.date);
+            
+            // Collect selected waiting causes
+            let causesList = [];
+            if (data.causes.noDoc) causesList.push("❌ แพทย์ไม่มาตรวจ");
+            if (data.causes.er) causesList.push("🏥 แพทย์ติด Pt Emergency ER");
+            if (data.causes.lr) causesList.push("🤰 แพทย์ติด Pt Emergency LR");
+            if (data.causes.ipd) causesList.push("🛌 แพทย์ติด Pt Emergency IPD");
+            if (data.causes.other) causesList.push(`✏️ เพิ่มเติม: ${data.causes.other}`);
+            
+            const causesText = causesList.length > 0 ? causesList.map(c => `   - ${c}`).join('\n') : '   - ไม่ระบุ';
+
+            // Compile timeline call
+            const callDirText = data.directorCall.callDirTime ? `⏱️ <b>โทรตาม:</b> ${data.directorCall.callDirTime} น.` : '⏱️ <b>โทรตาม:</b> -';
+            const dirArriveText = data.directorCall.dirArriveTime ? `🚗 <b>เดินทางมาถึง:</b> ${data.directorCall.dirArriveTime} น.` : '🚗 <b>เดินทางมาถึง:</b> -';
+            const dirNoShowText = data.directorCall.dirNoShowReason ? `⚠️ <b>ไม่มาเนื่องจาก:</b> ${data.directorCall.dirNoShowReason}` : '';
+
+            let timelineStr = `${callDirText}\n${dirArriveText}`;
+            if (dirNoShowText) timelineStr += `\n${dirNoShowText}`;
+
+            return `<b>🚨 รายงานสถานการณ์ ER เกิน 2 ชั่วโมง 🚨</b>\n` +
+                   `-----------------------------------------------\n` +
+                   `📅 <b>วันที่เกิดเหตุ:</b> ${thaiDate}\n` +
+                   `⏱️ <b>เวรปฏิบัติการ:</b> ${data.shift || 'ไม่ระบุ'}\n` +
+                   `🩺 <b>แพทย์เวร:</b> นพ./พญ. ${data.doctor || 'ไม่ระบุ'}\n\n` +
+                   `🔍 <b>สาเหตุที่ผู้ป่วยรอนาน:</b>\n${causesText}\n\n` +
+                   `📞 <b>การโทรรายงาน ผอ.:</b>\n${timelineStr}\n\n` +
+                   `📝 <b>ข้อมูล Inchart:</b>\n${data.inchart ? data.inchart : '-\n'}\n` +
+                   `📋 <b>สรุปรายละเอียดเหตุการณ์:</b>\n${data.events ? data.events : '-\n'}\n` +
+                   `-----------------------------------------------\n` +
+                   `<i>⏰ บันทึกระบบเมื่อ: ${data.createdAt}</i>`;
+        }
+
+        function loadHistory() {
+            const container = document.getElementById('historyList');
+            const counter = document.getElementById('historyCount');
+            
+            let historyList = [];
+            try {
+                const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+                if (stored) {
+                    historyList = JSON.parse(stored);
+                }
+            } catch (e) {
+                console.error("Local Storage Parsing Issue", e);
+            }
+
+            counter.textContent = `${historyList.length} รายการ`;
+
+            if (historyList.length === 0) {
+                container.innerHTML = `
+                    <div class="text-xs text-slate-400 text-center py-8 border-2 border-dashed border-slate-200 rounded-2xl">
+                        <i class="fa-solid fa-folder-open text-xl mb-1.5 block text-slate-300"></i>
+                        ไม่มีประวัติบันทึกในอุปกรณ์นี้
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = historyList.map(item => {
+                const displayDate = item.date ? formatThaiDate(item.date) : 'ไม่ระบุวันที่';
+                const countCauses = Object.values(item.causes || {}).filter(v => v === true).length + (item.causes?.other ? 1 : 0);
+                
+                return `
+                    <div class="p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl flex items-center justify-between gap-4 transition-colors">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2 mb-1.5">
+                                <span class="bg-clinical-100 text-clinical-800 text-[10px] font-bold px-2 py-0.5 rounded">
+                                    <i class="fa-solid fa-user-doctor mr-1"></i> ${escapeHtml(item.doctor)}
+                                </span>
+                                <span class="text-[10px] text-slate-500 font-bold bg-slate-200/60 px-2 py-0.5 rounded">${item.shift || 'ไม่ได้ระบุเวร'}</span>
+                            </div>
+                            <p class="text-xs font-bold text-slate-700">${displayDate}</p>
+                            <p class="text-[10px] text-slate-400 mt-1">${countCauses} สาเหตุ | บันทึกเมื่อ ${item.createdAt || 'ไม่ทราบเวลา'}</p>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button type="button" onclick="applyReport('${item.id}')" title="โหลดข้อมูลใส่ฟอร์ม" class="bg-white hover:bg-clinical-50 text-clinical-600 border border-slate-200 hover:border-clinical-200 p-2.5 rounded-xl text-xs transition-colors">
+                                <i class="fa-solid fa-file-import text-sm"></i>
+                            </button>
+                            <button type="button" onclick="deleteReport('${item.id}')" title="ลบ" class="bg-white hover:bg-rose-50 text-rose-500 border border-slate-200 hover:border-rose-200 p-2.5 rounded-xl text-xs transition-colors">
+                                <i class="fa-solid fa-trash-can text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Apply a saved record from history database back to active editor form
+        function applyReport(id) {
+            const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (!stored) return;
+            
+            const historyList = JSON.parse(stored);
+            const target = historyList.find(x => x.id === id);
+            
+            if (!target) return;
+
+            // Mapping state back to UI Inputs
+            formElements.date.value = target.date || '';
+            formElements.shift.value = target.shift || '';
+            formElements.doctor.value = target.doctor || '';
+            formElements.causeNoDoc.checked = target.causes?.noDoc || false;
+            formElements.causeEr.checked = target.causes?.er || false;
+            formElements.causeLr.checked = target.causes?.lr || false;
+            formElements.causeIpd.checked = target.causes?.ipd || false;
+            formElements.causeOther.value = target.causes?.other || '';
+            
+            // Director timeline mappings
+            if (target.directorCall) {
+                formElements.callDirTime.value = target.directorCall.callDirTime || '';
+                formElements.dirArriveTime.value = target.directorCall.dirArriveTime || '';
+                formElements.dirNoShowReason.value = target.directorCall.dirNoShowReason || '';
+            } else {
+                formElements.callDirTime.value = '';
+                formElements.dirArriveTime.value = '';
+                formElements.dirNoShowReason.value = '';
+            }
+
+            formElements.inchart.value = target.inchart || '';
+            formElements.events.value = target.events || '';
+
+            updatePreview();
+            triggerToast('โหลดข้อมูลรายการสำเร็จแล้ว');
+            
+            // Auto smooth scroll to top of inputs if in mobile/responsive view
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Delete specific medical record using custom confirm modal
+        function deleteReport(id) {
+            triggerConfirm("คุณต้องการยืนยันการลบประวัติแบบบันทึกฉบับนี้หรือไม่? (ไม่สามารถกู้คืนได้)", () => {
+                const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+                if (!stored) return;
+
+                let historyList = JSON.parse(stored);
+                historyList = historyList.filter(x => x.id !== id);
+                
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(historyList));
+                loadHistory();
+                triggerToast('ลบรายการประวัติสำเร็จเรียบร้อย', 'error');
+            });
+        }
+
+        // Wipe Form Inputs Clean
+        function resetForm() {
+            formElements.date.value = '';
+            formElements.shift.value = '';
+            formElements.doctor.value = '';
+            formElements.causeNoDoc.checked = false;
+            formElements.causeEr.checked = false;
+            formElements.causeLr.checked = false;
+            formElements.causeIpd.checked = false;
+            formElements.causeOther.value = '';
+            formElements.callDirTime.value = '';
+            formElements.dirArriveTime.value = '';
+            formElements.dirNoShowReason.value = '';
+            formElements.inchart.value = '';
+            formElements.events.value = '';
+
+            updatePreview();
+            triggerToast('ล้างค่าการกรอกข้อมูลฟอร์มแล้ว');
+        }
+
+        // Sanity helper to avoid XSS injections
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+    </script>
+</body>
+</html>
